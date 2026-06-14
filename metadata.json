@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Hợp Tác Viết Tiểu Thuyết AI",
+  "description": "Ứng dụng đồng viết tiểu thuyết với AI chuyên sâu, hỗ trợ thiết lập hồ sơ bối cảnh, hệ thống tu tiên/tu luyện, nhân vật và chế độ sáng tác chi tiết.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
