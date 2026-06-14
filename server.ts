@@ -249,21 +249,15 @@ Hãy viết câu trả lời của bạn đúng định dạng JSON này.
   }
 });
 
-// Serve front-end assets
+// Serve front-end assets (Development mode only in this file)
+// Vercel will handle production static assets via rewrites in vercel.json
 async function start() {
-  const distPath = path.join(process.cwd(), "dist");
-
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
