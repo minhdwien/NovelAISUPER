@@ -144,6 +144,10 @@ export default function App() {
   const [charFormSkills, setCharFormSkills] = useState('');
   const [charFormPower, setCharFormPower] = useState('');
 
+  // Header visibility
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+
   // Floating notifications/alerts
   const [notification, setNotification] = useState<{message: string, isError: boolean} | null>(null);
   const [aiStepFeedback, setAiStepFeedback] = useState<string>('');
@@ -152,6 +156,20 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('novel_app_profile', JSON.stringify(profile));
   }, [profile]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        if (isHeaderVisible) setIsHeaderVisible(false);
+      } else if (currentScrollY < lastScrollY - 10) {
+        if (!isHeaderVisible) setIsHeaderVisible(true);
+      }
+      setLastScrollY(currentScrollY);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY, isHeaderVisible]);
 
   useEffect(() => {
     localStorage.setItem('novel_app_chapters', JSON.stringify(chapters));
@@ -476,7 +494,13 @@ export default function App() {
       </AnimatePresence>
 
       {/* TOP DECORATIVE HEADER BAR */}
-      <header id="app-header" className="sticky top-0 z-40 bg-[#161512]/95 border-b border-[#2e2a22] text-amber-50/90 shadow-md">
+      <motion.header 
+        id="app-header" 
+        className="fixed top-0 left-0 right-0 z-40 bg-[#161512]/95 border-b border-[#2e2a22] text-amber-50/90 shadow-md"
+        initial={{ y: 0 }}
+        animate={{ y: isHeaderVisible ? 0 : -100 }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+      >
         <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
           
           <div className="flex items-center gap-2.5">
@@ -493,6 +517,13 @@ export default function App() {
 
           <div className="flex items-center gap-3">
             <button 
+              id="header-toggle-btn"
+              onClick={() => setIsHeaderVisible(!isHeaderVisible)}
+              className="px-2 py-1 text-[10px] bg-amber-950 border border-amber-800 rounded text-amber-300 hover:text-white"
+            >
+              {isHeaderVisible ? 'Ẩn Header' : 'Hiện Header'}
+            </button>
+            <button 
               id="reset-state-btn"
               onClick={handleResetDraft}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-amber-200 hover:text-amber-50 border border-amber-900/80 hover:bg-[#201e19] rounded-lg transition-colors cursor-pointer"
@@ -507,7 +538,10 @@ export default function App() {
           </div>
 
         </div>
-      </header>
+      </motion.header>
+
+      {/* Spacer to compensate for fixed header */}
+      <div className="h-[76px]"></div>
 
       {/* WORKSPACE AREA Container */}
       <main id="app-main-workspace" className="flex-1 max-w-7xl w-full mx-auto p-3 md:p-4 grid grid-cols-1 md:grid-cols-12 gap-4">

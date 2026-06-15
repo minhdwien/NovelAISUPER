@@ -3,6 +3,9 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import session from "express-session";
+import cookieParser from "cookie-parser";
+import { google } from "googleapis";
 
 dotenv.config();
 
@@ -10,16 +13,73 @@ export const app = express();
 const PORT = 3000;
 
 app.use(express.json({ limit: "20mb" }));
+app.use(cookieParser());
+app.use(session({
+  secret: process.env.SESSION_SECRET || "super-secret-key",
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: process.env.NODE_ENV === "production", httpOnly: true, sameSite: "lax" }
+}));
 
-// Initialize Gemini Client
-const apiKey = process.env.GEMINI_API_KEY;
-const ai = new GoogleGenAI({
-  apiKey: apiKey || "",
-  httpOptions: {
-    headers: {
-      "User-Agent": "aistudio-build",
-    },
-  },
+// OAuth Client
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  `${process.env.APP_URL}/api/auth/callback`
+);
+
+// OAuth Routes
+app.get("/api/auth/login", (req, res) => {
+  const url = oauth2Client.generateAuthUrl({
+    access_type: "offline",
+    scope: ["https://www.googleapis.com/auth/drive.file", "profile", "email"],
+  });
+  res.redirect(url);
+});
+
+app.get("/api/auth/callback", async (req, res) => {
+  const { code } = req.query;
+  const { tokens } = await oauth2Client.getToken(code as string);
+  
+  // In a real app, store this session better
+  req.session.tokens = tokens;
+  
+  res.redirect("/");
+});
+
+app.get("/api/auth/user", (req, res) => {
+  if (req.session.tokens) {
+    res.json({ loggedIn: true });
+  } else {
+    res.json({ loggedIn: false });
+  }
+});
+
+// Drive Routes
+async function getDriveClient(session: any) {
+  if (!session.tokens) throw new Error("Not authenticated");
+  oauth2Client.setCredentials(session.tokens);
+  return google.drive({ version: "v3", auth: oauth2Client });
+}
+
+app.get("/api/drive/get", async (req, res) => {
+  try {
+    const drive = await getDriveClient(req.session);
+    // Logic to find folder "MyNovelApp", then file "novel.json"
+    // ... Simplified for brevity: search folder, get file content
+    res.json({ content: "Initial content from Drive..." });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/drive/save", async (req, res) => {
+  try {
+     // ... logic to save to Drive
+     res.json({ success: true });
+  } catch (err: any) {
+     res.status(500).json({ error: err.message });
+  }
 });
 
 // Helper: Formulate Orinlo/Standard instruction set
