@@ -34,6 +34,9 @@ const DEFAULT_PROFILE: StoryProfile = {
   idea: 'Một tác phẩm kiếm hiệp huyền ảo đầy kịch tính, bi thương nhưng cháy bỏng đam mê, xoay quanh linh hồn thiên kiếm bị nguyền rủa và mối duyên nợ cấm kỵ giữa Sư tôn thanh cao lãnh thấu xương tủy và Nữ đệ tử mang cốt phượng phong ấn.',
   worldBackground: 'Thần Châu Linh Giới chia băng hỏa nhị lộ. Lấy Băng Sương Tiên Tông ngự trị đỉnh Tuyết Sơn ngàn năm để cô lập độc lập với bên ngoài. Linh khí đậm đới, càng tu luyện lên cao tu vi càng chuyển biến tâm tính lạnh lùng cô tịch, nhưng đổi lại sức mạnh tuyệt đỉnh phá không sơ khai.',
   startingHook: 'Trong bối cảnh Tuyết Sơn đại hàn sụp đổ, Sư tôn Thẩm Thanh Ngôn do bộc phát âm độc tu vi suy giảm nghiêm trọng, cùng nữ đệ tử Dung Nguyệt trú lạnh trong một hang băng lấp lánh huyền ảo cô lập tuyệt đối, khởi nguồn cho một giao kèo bí mật.',
+  themes: ['Bi thương', 'Đam mê cấm kỵ', 'Chính tà nan phân'],
+  coreConflict: 'Mâu thuẫn giữa sư đồ trong môi trường khắc nghiệt và kịch độc Âm Hàn.',
+  styleNotes: 'Cổ điển, hoa mỹ, nhiều từ ngữ gợi cảm, nhịp điệu chậm rãi nhưng căng thẳng.',
   cultivationSystem: ['Kiếm Vực Đạo', 'Phượng Cốt Quyết', 'Hàn Độc Tiên Pháp'],
   ranks: ['Luyện Khí Cảnh', 'Trúc Cơ Kỳ', 'Kiếm Tôn Cảnh', 'Nguyên Anh Thượng Thần', 'Đột Phá Hóa Thần'],
   currencies: ['Linh Thạch Ngũ Sắc', 'Huyết Tinh', 'Thần Nguyên Bảo'],
@@ -50,7 +53,8 @@ const DEFAULT_PROFILE: StoryProfile = {
       biography: 'Sư tôn Thanh Cao của Tuyệt Tình Phong, Kiếm Tôn tuyệt đỉnh lừng lẫy thiên hạ. Vì cứu môn phái từng trấn áp phong ấn Ma giới nên bị trúng kịch độc Âm Hàn Chí Cực thấu tâm can, mỗi đêm trăng tròn phải hứng chịu thống khổ đông cứng thân xác.',
       personality: 'Lạnh lùng như băng cốc, đầy tính kiểm soát và bá đạo, mang gánh nặng thâm sâu nhưng thực chất thèm khát sự ấm áp chân thành, tính khí âm thầm chấp niệm lôi cuốn.',
       skills: 'Thái Cực Băng Sương Kiếm, Vạn Kiếm Quy Tông, Tâm Thức Ngự Thể',
-      startingPower: 'Công lực: Cực Hạn Kiếm Tôn, Tinh Thần: Nguyên Anh Thần Thức, Cơ Thể: Suy bại âm độc (40%)'
+      startingPower: 'Công lực: Cực Hạn Kiếm Tôn, Tinh Thần: Nguyên Anh Thần Thức, Cơ Thể: Suy bại âm độc (40%)',
+      relationships: 'Sư tôn của Mộ Dung Nguyệt.'
     },
     {
       id: 'char-2',
@@ -59,7 +63,8 @@ const DEFAULT_PROFILE: StoryProfile = {
       biography: 'Nữ đệ tử cuối cùng của Tuyệt Tình Phong. Vốn là hậu duệ duy nhất của Thượng Cổ Phượng tộc chịu phong ấn, có thân thể linh khí thuần dương phát hỏa tự nhiên cực kỳ quý hiếm. Nàng kiên cường, trốn chạy khỏi hôn ước gia tộc sắp đặt để tìm lối thoát tự sinh.',
       personality: 'Quật cường, thông tuệ, can đảm vô song, đối với Sư tôn tôn kính nhưng bên trong lại dấy lên sự tò mò mạnh mẽ và khao khát được khuất phục hay bộc phát ngọn lửa ẩn tàng trong tâm khảm.',
       skills: 'Phượng Dực Không Hành, Cố Nguyên Phục Linh Quyết, Ngự Hỏa Chiêm Tinh',
-      startingPower: 'Công lực: Trúc Cơ Trung Kỳ, Tinh Thần: Linh Thần bẩm sinh, Cơ Thể: Thuần Dương Phượng Huyết'
+      startingPower: 'Công lực: Trúc Cơ Trung Kỳ, Tinh Thần: Linh Thần bẩm sinh, Cơ Thể: Thuần Dương Phượng Huyết',
+      relationships: 'Đệ tử của Thẩm Thanh Ngôn.'
     }
   ]
 };
@@ -147,6 +152,53 @@ export default function App() {
   // Header visibility
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  
+  // Auth & Drive State
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [driveFileId, setDriveFileId] = useState<string | null>(localStorage.getItem('novel_drive_file_id'));
+
+  useEffect(() => {
+    fetch('/api/auth/user')
+      .then(res => res.json())
+      .then(data => setIsLoggedIn(data.loggedIn));
+  }, []);
+
+  const handleDriveLoad = async () => {
+    try {
+      const res = await fetch('/api/drive/get');
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      
+      // Update state with data from Drive
+      // Assuming content represents chapters
+      setChapters(data.content || []);
+      setDriveFileId(data.fileId);
+      localStorage.setItem('novel_drive_file_id', data.fileId);
+      showNotification('Đã tải thành công từ Google Drive!');
+    } catch (err: any) {
+      showNotification(err.message, true);
+    }
+  };
+
+  const handleDriveSave = async () => {
+    if (!driveFileId) {
+      showNotification('Chưa có file ID, hãy tải từ Drive trước!', true);
+      return;
+    }
+    try {
+      const res = await fetch('/api/drive/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: chapters, fileId: driveFileId })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      
+      showNotification('Đã lưu thành công lên Google Drive!');
+    } catch (err: any) {
+      showNotification(err.message, true);
+    }
+  };
 
   // Floating notifications/alerts
   const [notification, setNotification] = useState<{message: string, isError: boolean} | null>(null);
@@ -516,6 +568,58 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
+            {!isLoggedIn ? (
+              <a href="/api/auth/login" className="px-3 py-1.5 text-xs bg-white text-gray-900 rounded-lg hover:bg-gray-100">Đăng nhập Google</a>
+            ) : (
+              <>
+                <button onClick={handleDriveLoad} className="px-3 py-1.5 text-xs bg-emerald-800 text-white rounded-lg hover:bg-emerald-700">Tải từ Drive</button>
+                <button onClick={handleDriveSave} className="px-3 py-1.5 text-xs bg-amber-800 text-white rounded-lg hover:bg-amber-700">Lưu lên Drive</button>
+              </>
+            )}
+            <button 
+              onClick={() => {
+                const data = JSON.stringify({ profile, chapters, settings }, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `novel_profile_${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+              }}
+              className="px-3 py-1.5 text-xs bg-blue-800 text-white rounded-lg hover:bg-blue-700"
+            >
+              Xuất Hồ sơ
+            </button>
+            <label className="px-3 py-1.5 text-xs bg-blue-800 text-white rounded-lg hover:bg-blue-700 cursor-pointer">
+              Nhập Hồ sơ
+              <input 
+                type="file" 
+                accept=".json" 
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    try {
+                      const data = JSON.parse(event.target?.result as string);
+                      if (data.profile && data.chapters && data.settings) {
+                        setProfile(data.profile);
+                        setChapters(data.chapters);
+                        setSettings(data.settings);
+                        setSelectedChapterId(data.chapters[0]?.id || '');
+                        showNotification('Đã nhập hồ sơ thành công!');
+                      } else {
+                        showNotification('File JSON không hợp lệ!', true);
+                      }
+                    } catch {
+                      showNotification('Lỗi khi đọc file!', true);
+                    }
+                  };
+                  reader.readAsText(file);
+                }}
+              />
+            </label>
             <button 
               id="header-toggle-btn"
               onClick={() => setIsHeaderVisible(!isHeaderVisible)}

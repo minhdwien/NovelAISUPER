@@ -10,6 +10,7 @@ export interface Character {
   personality: string;
   skills: string;
   startingPower: string; // Dynamic stats or power rating text
+  relationships: string; // Brief notes on interactions with other characters
 }
 
 export interface StoryProfile {
@@ -18,6 +19,9 @@ export interface StoryProfile {
   idea: string;
   worldBackground: string;
   startingHook: string;
+  themes: string[]; // E.g., ['Bi thương', 'Đam mê cấm kỵ', 'Chính tà nan phân']
+  coreConflict: string; // The central struggle of the novel
+  styleNotes: string; // Tone/voice, e.g., 'Cổ điển, hoa mỹ, nhiều từ ngữ gợi cảm'
 
   // Step 2: World Settings
   cultivationSystem: string[]; // List of cultivation types or ranks

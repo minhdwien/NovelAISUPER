@@ -7,6 +7,13 @@ import session from "express-session";
 import cookieParser from "cookie-parser";
 import { google } from "googleapis";
 
+// Define custom session type
+declare module "express-session" {
+  interface SessionData {
+    tokens: any;
+  }
+}
+
 dotenv.config();
 
 export const app = express();
@@ -27,6 +34,16 @@ const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_SECRET,
   `${process.env.APP_URL}/api/auth/callback`
 );
+
+// Initialize Gemini Client
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY || "",
+  httpOptions: {
+    headers: {
+      "User-Agent": "aistudio-build",
+    },
+  },
+});
 
 // OAuth Routes
 app.get("/api/auth/login", (req, res) => {
@@ -62,12 +79,64 @@ async function getDriveClient(session: any) {
   return google.drive({ version: "v3", auth: oauth2Client });
 }
 
+async function getOrCreateFolder(drive: any) {
+  const folderName = "MyNovelApp";
+  const res = await drive.files.list({
+    q: `name = '${folderName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+    fields: 'files(id, name)',
+  });
+  
+  if (res.data.files && res.data.files.length > 0) {
+    return res.data.files[0].id;
+  }
+  
+  const folder = await drive.files.create({
+    requestBody: {
+      name: folderName,
+      mimeType: 'application/vnd.google-apps.folder',
+    },
+    fields: 'id',
+  });
+  return folder.data.id;
+}
+
+async function getOrCreateFile(drive: any, folderId: string) {
+  const fileName = "novel.json";
+  const res = await drive.files.list({
+    q: `name = '${fileName}' and '${folderId}' in parents and trashed = false`,
+    fields: 'files(id, name)',
+  });
+  
+  if (res.data.files && res.data.files.length > 0) {
+    return res.data.files[0].id;
+  }
+  
+  const file = await drive.files.create({
+    requestBody: {
+      name: fileName,
+      parents: [folderId],
+    },
+    media: {
+      mimeType: 'application/json',
+      body: JSON.stringify({}),
+    },
+    fields: 'id',
+  });
+  return file.data.id;
+}
+
 app.get("/api/drive/get", async (req, res) => {
   try {
     const drive = await getDriveClient(req.session);
-    // Logic to find folder "MyNovelApp", then file "novel.json"
-    // ... Simplified for brevity: search folder, get file content
-    res.json({ content: "Initial content from Drive..." });
+    const folderId = await getOrCreateFolder(drive);
+    const fileId = await getOrCreateFile(drive, folderId);
+    
+    const file = await drive.files.get({
+      fileId: fileId,
+      alt: 'media',
+    });
+    
+    res.json({ content: file.data, fileId });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -75,7 +144,17 @@ app.get("/api/drive/get", async (req, res) => {
 
 app.post("/api/drive/save", async (req, res) => {
   try {
-     // ... logic to save to Drive
+     const { content, fileId } = req.body;
+     const drive = await getDriveClient(req.session);
+     
+     await drive.files.update({
+       fileId: fileId,
+       media: {
+         mimeType: 'application/json',
+         body: JSON.stringify(content),
+       },
+     });
+     
      res.json({ success: true });
   } catch (err: any) {
      res.status(500).json({ error: err.message });
@@ -208,7 +287,7 @@ app.post("/api/generate-chapter", async (req, res) => {
   try {
     const { profile, settings, currentChapter, previousChaptersText, actionType, userInstruction } = req.body;
 
-    if (!apiKey) {
+    if (!process.env.GEMINI_API_KEY) {
       return res.status(400).json({
         error: "Chưa cấu hình GEMINI_API_KEY ở mục Secrets của Settings. Vui lòng thêm key để kích hoạt AI."
       });
