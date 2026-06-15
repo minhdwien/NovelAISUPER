@@ -157,7 +157,7 @@ export default function App() {
   const handleMouseMove = (e: React.MouseEvent) => {
     const now = Date.now();
     if (now - lastParticleTime.current > 80) { // Giảm tần suất tạo hạt
-       const burstSize = 3; // Giảm số lượng hạt mỗi lần
+       const burstSize = 12; // 3 * 4 = 12
        const newParticles = [];
        for (let i = 0; i < burstSize; i++) {
            newParticles.push({
