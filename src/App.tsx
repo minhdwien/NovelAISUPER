@@ -149,6 +149,29 @@ export default function App() {
   const [charFormSkills, setCharFormSkills] = useState('');
   const [charFormPower, setCharFormPower] = useState('');
 
+  // Particle state
+  const [particles, setParticles] = useState<{id: number, x: number, y: number, color: string}[]>([]);
+  const lastParticleTime = React.useRef(0);
+  const colors = ["bg-blue-400", "bg-purple-400", "bg-pink-400", "bg-amber-400", "bg-emerald-400"];
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const now = Date.now();
+    if (now - lastParticleTime.current > 80) { // Giảm tần suất tạo hạt
+       const burstSize = 3; // Giảm số lượng hạt mỗi lần
+       const newParticles = [];
+       for (let i = 0; i < burstSize; i++) {
+           newParticles.push({
+               id: Date.now() + i,
+               x: e.clientX,
+               y: e.clientY,
+               color: colors[Math.floor(Math.random() * colors.length)]
+           });
+       }
+       setParticles((prev) => [...prev, ...newParticles]);
+       lastParticleTime.current = now;
+    }
+  };
+
   // Header visibility
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
@@ -348,7 +371,8 @@ export default function App() {
       biography: charFormBio,
       personality: charFormPersonality,
       skills: charFormSkills,
-      startingPower: charFormPower
+      startingPower: charFormPower,
+      relationships: ''
     };
 
     if (editCharacterId) {
@@ -523,8 +547,27 @@ export default function App() {
   };
 
   return (
-    <div id="main-app-container" className="min-h-screen bg-[#eaecdf] text-[#2d2c25] font-sans antialiased flex flex-col pointer-events-auto custom-scrollbar">
+    <div id="main-app-container" onMouseMove={handleMouseMove} className="min-h-screen bg-[#eaecdf] text-[#2d2c25] font-sans antialiased flex flex-col pointer-events-auto custom-scrollbar">
       
+      {/* Particle Overlay */}
+      <div className="fixed inset-0 pointer-events-none z-[1000] overflow-hidden">
+        {particles.map(p => (
+          <motion.div
+            key={p.id}
+            initial={{ opacity: 1, x: p.x, y: p.y, scale: 1 }}
+            animate={{
+              opacity: 0,
+              x: p.x + (Math.random() * 100 - 50),
+              y: p.y + (Math.random() * 100 - 50),
+              scale: 0,
+            }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            onAnimationComplete={() => setParticles(prev => prev.filter(part => part.id !== p.id))}
+            className={`absolute w-1 h-1 rounded-full ${p.color} pointer-events-none shadow-[0_0_4px_rgba(255,255,255,0.6)]`}
+          />
+        ))}
+      </div>
+
       {/* Dynamic Alerts / Notification */}
       <AnimatePresence>
         {notification && (
@@ -545,37 +588,26 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* TOP DECORATIVE HEADER BAR */}
+      {/* TOP DECORATIVE HEADER BAR - Refined for App Feel */}
       <motion.header 
         id="app-header" 
-        className="fixed top-0 left-0 right-0 z-40 bg-[#161512]/95 border-b border-[#2e2a22] text-amber-50/90 shadow-md"
+        className="fixed top-0 left-0 right-0 z-40 bg-[#161512]/95 border-b border-[#2e2a22] text-amber-50/90 shadow-md backdrop-blur-sm"
         initial={{ y: 0 }}
         animate={{ y: isHeaderVisible ? 0 : -100 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
       >
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+        <div className="max-w-[98%] mx-auto px-4 py-2 flex items-center justify-between">
           
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-gradient-to-br from-amber-600 to-red-800 rounded-xl shadow-inner border border-amber-500/30">
-              <PenTool className="w-6 h-6 text-amber-100" />
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-gradient-to-br from-amber-600 to-red-800 rounded-lg shadow-inner border border-amber-500/30">
+              <PenTool className="w-4 h-4 text-amber-100" />
             </div>
-            <div>
-              <h1 id="app-main-title" className="font-serif font-bold text-xl md:text-2xl text-amber-100 tracking-tight flex items-center gap-2">
-                Hợp Tác Viết Tiểu Thuyết AI <span className="font-sans text-[10px] bg-red-900/60 border border-red-500/30 text-red-200 px-1.5 py-0.5 rounded font-bold uppercase tracking-widest">Co-Write Workspace</span>
-              </h1>
-              <p className="text-xs text-amber-300/60 font-mono">Bút pháp Orinlo Core & Hồ Sơ Thế Giới Hoàn Chỉnh</p>
-            </div>
+            <h1 className="font-serif font-bold text-lg text-amber-100 tracking-tight">
+              Co-Write <span className="text-amber-500/80 font-normal">Workspace</span>
+            </h1>
           </div>
 
-          <div className="flex items-center gap-3">
-            {!isLoggedIn ? (
-              <a href="/api/auth/login" className="px-3 py-1.5 text-xs bg-white text-gray-900 rounded-lg hover:bg-gray-100">Đăng nhập Google</a>
-            ) : (
-              <>
-                <button onClick={handleDriveLoad} className="px-3 py-1.5 text-xs bg-emerald-800 text-white rounded-lg hover:bg-emerald-700">Tải từ Drive</button>
-                <button onClick={handleDriveSave} className="px-3 py-1.5 text-xs bg-amber-800 text-white rounded-lg hover:bg-amber-700">Lưu lên Drive</button>
-              </>
-            )}
+          <div className="flex items-center gap-2">
             <button 
               onClick={() => {
                 const data = JSON.stringify({ profile, chapters, settings }, null, 2);
@@ -586,83 +618,66 @@ export default function App() {
                 a.download = `novel_profile_${new Date().toISOString().slice(0, 10)}.json`;
                 a.click();
               }}
-              className="px-3 py-1.5 text-xs bg-blue-800 text-white rounded-lg hover:bg-blue-700"
+              className="px-3 py-1 text-[11px] bg-blue-800 text-white rounded-lg hover:bg-blue-700"
             >
               Xuất Hồ sơ
             </button>
-            <label className="px-3 py-1.5 text-xs bg-blue-800 text-white rounded-lg hover:bg-blue-700 cursor-pointer">
+            <label className="px-3 py-1 text-[11px] bg-blue-800 text-white rounded-lg hover:bg-blue-700 cursor-pointer">
               Nhập Hồ sơ
-              <input 
-                type="file" 
-                accept=".json" 
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                    try {
-                      const data = JSON.parse(event.target?.result as string);
-                      if (data.profile && data.chapters && data.settings) {
-                        setProfile(data.profile);
-                        setChapters(data.chapters);
-                        setSettings(data.settings);
-                        setSelectedChapterId(data.chapters[0]?.id || '');
-                        showNotification('Đã nhập hồ sơ thành công!');
-                      } else {
-                        showNotification('File JSON không hợp lệ!', true);
-                      }
-                    } catch {
-                      showNotification('Lỗi khi đọc file!', true);
+              <input type="file" accept=".json" className="hidden" onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                  try {
+                    const data = JSON.parse(event.target?.result as string);
+                    if (data.profile && data.chapters && data.settings) {
+                      setProfile(data.profile);
+                      setChapters(data.chapters);
+                      setSettings(data.settings);
+                      setSelectedChapterId(data.chapters[0]?.id || '');
+                      showNotification('Đã nhập hồ sơ thành công!');
+                    } else {
+                      showNotification('File JSON không hợp lệ!', true);
                     }
-                  };
-                  reader.readAsText(file);
-                }}
-              />
+                  } catch {
+                    showNotification('Lỗi khi đọc file!', true);
+                  }
+                };
+                reader.readAsText(file);
+              }} />
             </label>
+            {!isLoggedIn ? (
+              <a href="/api/auth/login" className="px-3 py-1 text-[11px] bg-white text-gray-900 rounded-lg hover:bg-gray-100">Đăng nhập</a>
+            ) : (
+              <>
+                <button onClick={handleDriveLoad} className="px-3 py-1 text-[11px] bg-emerald-800 text-white rounded-lg hover:bg-emerald-700">Tải Drive</button>
+                <button onClick={handleDriveSave} className="px-3 py-1 text-[11px] bg-amber-800 text-white rounded-lg hover:bg-amber-700">Lưu Drive</button>
+              </>
+            )}
             <button 
               id="header-toggle-btn"
               onClick={() => setIsHeaderVisible(!isHeaderVisible)}
-              className="px-2 py-1 text-[10px] bg-amber-950 border border-amber-800 rounded text-amber-300 hover:text-white"
+              className="p-1.5 text-xs bg-amber-950 border border-amber-800 rounded text-amber-300 hover:text-white"
             >
-              {isHeaderVisible ? 'Ẩn Header' : 'Hiện Header'}
+              {isHeaderVisible ? 'Ẩn' : 'Hiện'}
             </button>
-            <button 
-              id="reset-state-btn"
-              onClick={handleResetDraft}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-amber-200 hover:text-amber-50 border border-amber-900/80 hover:bg-[#201e19] rounded-lg transition-colors cursor-pointer"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Dùng Bối Cảnh Mẫu</span>
-            </button>
-            <div className="hidden lg:flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 bg-emerald-950/50 border border-emerald-920/40 px-2.5 py-1 rounded-full uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span>
-              Linh Khí Sẵn Sàng
-            </div>
           </div>
-
         </div>
       </motion.header>
 
-      {/* Spacer to compensate for fixed header */}
-      <div className="h-[76px]"></div>
-
-      {/* WORKSPACE AREA Container */}
-      <main id="app-main-workspace" className="flex-1 max-w-7xl w-full mx-auto p-3 md:p-4 grid grid-cols-1 md:grid-cols-12 gap-4">
+      {/* WORKSPACE AREA Container - TWO PANEL LAYOUT */}
+      <main id="app-main-workspace" className="flex-1 w-full mx-auto p-4 pt-16 grid grid-cols-1 md:grid-cols-12 gap-4 h-screen">
         
-        {/* LEFT COLUMN: STORY PROFILE SYSTEM (Steps 1, 2, 3 wizard customizable at any time) */}
-        <section id="sidebar-story-profile" className="md:col-span-5 lg:col-span-4 flex flex-col gap-4">
-          
-          <div className="bg-[#FAF9F5] border border-[#dbd8cf] rounded-2xl shadow-sm overflow-hidden flex flex-col h-full">
+        {/* LEFT PANEL: NAVIGATION & SETTINGS */}
+        <section id="sidebar-story-profile" className="md:col-span-4 lg:col-span-3 flex flex-col gap-4 h-[calc(100vh-80px)] overflow-hidden">
+          <div className="app-panel flex flex-col h-full bg-[#FAF9F5]">
             
             {/* Sidebar Title Header */}
             <div className="p-4 bg-gradient-to-r from-[#1c1a16] to-[#272621] text-amber-100 border-b border-[#ddda9a]/10 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Compass className="w-5 h-5 text-amber-400" />
-                <h2 className="font-serif font-semibold text-base">Hồ Sơ Cốt Truyện Bảo Bản</h2>
-              </div>
-              <div className="text-[11px] font-mono text-amber-300-40 px-2 py-0.5 bg-amber-950/70 border border-amber-800/40 rounded-full">
-                Sư Đồ - Tu Chân
+                <h2 className="font-serif font-semibold text-base">Hồ Sơ Cốt Truyện</h2>
               </div>
             </div>
 
@@ -1418,10 +1433,10 @@ export default function App() {
                     </span>
                   </div>
 
-                  {/* Manual Editable textarea of chapter content */}
+                  {/* Manual Editable textarea of chapter content - USING APP-PANEL AESTHETIC */}
                   <textarea 
                     id="parchment-text-area"
-                    className="w-full text-sm md:text-base font-serif bg-transparent leading-loose text-[#2b271e] focus:outline-none resize-none min-h-[460px] max-h-[800px] z-10 pl-0 md:pl-6 text-justify custom-scrollbar"
+                    className="app-panel w-full text-sm md:text-base font-serif bg-transparent leading-loose text-[#2b271e] focus:outline-none resize-none min-h-[460px] max-h-[800px] z-10 pl-0 md:pl-6 text-justify custom-scrollbar p-6"
                     placeholder="Ấn nút 'Để AI Đồng Sáng Tác' để khởi tạo áng văn lãng mạn lôi cuốn thăng hoa ngũ giác quan, hoặc tự tay viết suy tư thầm kín của bạn tại đây linh khí..."
                     value={activeChapter?.content || ''}
                     rows={16}
