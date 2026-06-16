@@ -8,9 +8,9 @@ import cookieParser from "cookie-parser";
 import { google } from "googleapis";
 
 // Define custom session type
-declare module "express-serve-static-core" {
-  interface Request {
-    session: any;
+declare module "express-session" {
+  interface SessionData {
+    tokens: any;
   }
 }
 

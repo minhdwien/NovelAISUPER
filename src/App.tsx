@@ -108,7 +108,6 @@ const DEFAULT_SETTINGS: AISettings = {
 };
 
 export default function App() {
-  // Persistence & State States
   const [profile, setProfile] = useState<StoryProfile>(() => {
     const saved = localStorage.getItem('novel_app_profile');
     return saved ? JSON.parse(saved) : DEFAULT_PROFILE;
@@ -128,19 +127,17 @@ export default function App() {
     return chapters[0]?.id || '';
   });
 
-  // Current active entity view
+  const [activeTab, setActiveTab] = useState<'write' | 'profile'>('write');
   const [profileStep, setProfileStep] = useState<number>(1);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [userInstruction, setUserInstruction] = useState<string>('');
   const [actionType, setActionType] = useState<'writeNew' | 'continue' | 'elaborate'>('writeNew');
   
-  // Local lists pending strings
   const [newCultivation, setNewCultivation] = useState('');
   const [newRank, setNewRank] = useState('');
   const [newCurrency, setNewCurrency] = useState('');
   const [newRule, setNewRule] = useState('');
 
-  // Character local state form
   const [editCharacterId, setEditCharacterId] = useState<string | null>(null);
   const [charFormName, setCharFormName] = useState('');
   const [charFormGender, setCharFormGender] = useState('Nữ');
@@ -149,102 +146,15 @@ export default function App() {
   const [charFormSkills, setCharFormSkills] = useState('');
   const [charFormPower, setCharFormPower] = useState('');
 
-  // Particle state
-  const [particles, setParticles] = useState<{id: number, x: number, y: number, color: string}[]>([]);
-  const lastParticleTime = React.useRef(0);
-  const colors = ["bg-blue-400", "bg-purple-400", "bg-pink-400", "bg-amber-400", "bg-emerald-400"];
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    const now = Date.now();
-    if (now - lastParticleTime.current > 80) { // Giảm tần suất tạo hạt
-       const burstSize = 12; // 3 * 4 = 12
-       const newParticles = [];
-       for (let i = 0; i < burstSize; i++) {
-           newParticles.push({
-               id: Date.now() + i,
-               x: e.clientX,
-               y: e.clientY,
-               color: colors[Math.floor(Math.random() * colors.length)]
-           });
-       }
-       setParticles((prev) => [...prev, ...newParticles]);
-       lastParticleTime.current = now;
-    }
-  };
-
-  // Header visibility
-  const [lastScrollY, setLastScrollY] = useState(0);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-  
-  // Auth & Drive State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [driveFileId, setDriveFileId] = useState<string | null>(localStorage.getItem('novel_drive_file_id'));
-
-  useEffect(() => {
-    fetch('/api/auth/user')
-      .then(res => res.json())
-      .then(data => setIsLoggedIn(data.loggedIn));
-  }, []);
-
-  const handleDriveLoad = async () => {
-    try {
-      const res = await fetch('/api/drive/get');
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      
-      // Update state with data from Drive
-      // Assuming content represents chapters
-      setChapters(data.content || []);
-      setDriveFileId(data.fileId);
-      localStorage.setItem('novel_drive_file_id', data.fileId);
-      showNotification('Đã tải thành công từ Google Drive!');
-    } catch (err: any) {
-      showNotification(err.message, true);
-    }
-  };
-
-  const handleDriveSave = async () => {
-    if (!driveFileId) {
-      showNotification('Chưa có file ID, hãy tải từ Drive trước!', true);
-      return;
-    }
-    try {
-      const res = await fetch('/api/drive/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: chapters, fileId: driveFileId })
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      
-      showNotification('Đã lưu thành công lên Google Drive!');
-    } catch (err: any) {
-      showNotification(err.message, true);
-    }
-  };
-
-  // Floating notifications/alerts
-  const [notification, setNotification] = useState<{message: string, isError: boolean} | null>(null);
+  const [driveFileId, setDriveFileId] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ message: string; isError?: boolean } | null>(null);
   const [aiStepFeedback, setAiStepFeedback] = useState<string>('');
 
-  // Save changes to localstorage when they happen
   useEffect(() => {
     localStorage.setItem('novel_app_profile', JSON.stringify(profile));
   }, [profile]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        if (isHeaderVisible) setIsHeaderVisible(false);
-      } else if (currentScrollY < lastScrollY - 10) {
-        if (!isHeaderVisible) setIsHeaderVisible(true);
-      }
-      setLastScrollY(currentScrollY);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY, isHeaderVisible]);
 
   useEffect(() => {
     localStorage.setItem('novel_app_chapters', JSON.stringify(chapters));
@@ -254,142 +164,181 @@ export default function App() {
     localStorage.setItem('novel_app_settings', JSON.stringify(settings));
   }, [settings]);
 
-  const activeChapter = chapters.find(c => c.id === selectedChapterId) || chapters[0];
+  // Auth Status check for Drive sync on mount
+  useEffect(() => {
+    fetch('/api/auth/user')
+      .then(res => {
+        if (res.ok) return res.json();
+        return null;
+      })
+      .then(user => {
+        if (user && user.email) {
+          setIsLoggedIn(true);
+          if (user.driveFileId) {
+            setDriveFileId(user.driveFileId);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const showNotification = (message: string, isError: boolean = false) => {
     setNotification({ message, isError });
-    setTimeout(() => setNotification(null), 4000);
+    setTimeout(() => {
+      setNotification(null);
+    }, 4500);
   };
 
-  // Chapter Handlers
+  const handleResetDraft = () => {
+    if (confirm('Bạn có chắc chắn muốn nạp lại bối cảnh mẫu mặc định? Toàn bộ sửa đổi hiện tại sẽ ghi đè.')) {
+      setProfile(DEFAULT_PROFILE);
+      setChapters(DEFAULT_CHAPTERS);
+      setSettings(DEFAULT_SETTINGS);
+      setSelectedChapterId(DEFAULT_CHAPTERS[0].id);
+      showNotification('Đã khởi hồi bối cảnh chuẩn!');
+    }
+  };
+
   const handleCreateChapter = () => {
-    const nextNum = chapters.length + 1;
+    const nextNumber = chapters.length + 1;
+    const newId = `chap-${Date.now()}`;
     const newChap: Chapter = {
-      id: `chap-${Date.now()}`,
-      number: nextNum,
-      title: `Chương ${nextNum}: Tiêu Đề Mới Phác Thảo`,
-      userPrompt: 'Nhấp nhập nội dung ý tưởng phác họa để AI viết sâu rộng phế tu vi hay cảnh ấm áp...',
+      id: newId,
+      number: nextNumber,
+      title: `Hồi ${nextNumber}: Tiêu Đề Chưa Đặt`,
+      userPrompt: '',
       content: '',
       wordCount: 0,
       createdAt: new Date().toISOString()
     };
     const updated = [...chapters, newChap];
     setChapters(updated);
-    setSelectedChapterId(newChap.id);
-    showNotification(`Đã khởi tạo Chương ${nextNum} thành công!`);
-  };
-
-  const handleUpdateChapterField = (field: keyof Chapter, value: any) => {
-    if (!activeChapter) return;
-    const updated = chapters.map(c => {
-      if (c.id === activeChapter.id) {
-        const item = { ...c, [field]: value };
-        if (field === 'content') {
-          item.wordCount = value.trim().split(/\s+/).filter(Boolean).length;
-        }
-        return item;
-      }
-      return c;
-    });
-    setChapters(updated);
+    setSelectedChapterId(newId);
+    showNotification(`Đã tạo Hồi ${nextNumber} thành công!`);
   };
 
   const handleDeleteChapter = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (chapters.length <= 1) {
-      showNotification('Không thể xóa chương cuối cùng của cuốn tiểu thuyết!', true);
+      showNotification('Không thể xóa hết hồi chương. Phải có ít nhất một chương khởi thủy.', true);
       return;
     }
-    const filtered = chapters.filter(c => c.id !== id);
-    setChapters(filtered);
-    if (selectedChapterId === id) {
-      setSelectedChapterId(filtered[0].id);
+    if (confirm('Bạn có chắc muốn xóa vĩnh viễn hồi chương này?')) {
+      const remaining = chapters.filter(c => c.id !== id);
+      const renumbered = remaining.map((c, idx) => ({ ...c, number: idx + 1 }));
+      setChapters(renumbered);
+      if (selectedChapterId === id) {
+        setSelectedChapterId(renumbered[0]?.id || '');
+      }
+      showNotification('Đã xóa bỏ hồi chương.');
     }
-    showNotification('Đã xóa chương lựa chọn.');
   };
 
-  // Step 2 array helpers
+  const handleUpdateChapterField = (field: keyof Chapter, value: any) => {
+    setChapters(prev => prev.map(c => {
+      if (c.id === selectedChapterId) {
+        const updated = { ...c, [field]: value };
+        if (field === 'content') {
+          updated.wordCount = (value || '').trim().split(/\s+/).filter(Boolean).length;
+        }
+        return updated;
+      }
+      return c;
+    }));
+  };
+
+  const activeChapter = chapters.find(c => c.id === selectedChapterId) || chapters[0];
+
+  // Steps collection triggers
   const handleAddCultivation = () => {
     if (!newCultivation.trim()) return;
-    setProfile(p => ({
-      ...p,
-      cultivationSystem: [...p.cultivationSystem, newCultivation.trim()]
-    }));
+    if (profile.cultivationSystem.includes(newCultivation.trim())) {
+      showNotification('Hệ thống này đã tồn tại!', true);
+      return;
+    }
+    setProfile({
+      ...profile,
+      cultivationSystem: [...profile.cultivationSystem, newCultivation.trim()]
+    });
     setNewCultivation('');
-    showNotification('Đã thêm phương pháp/hệ thống linh văn tu luyện!');
+    showNotification('Đã ghim hệ pháp tu luyện.');
   };
 
   const handleAddRank = () => {
     if (!newRank.trim()) return;
-    setProfile(p => ({
-      ...p,
-      ranks: [...p.ranks, newRank.trim()]
-    }));
+    if (profile.ranks.includes(newRank.trim())) {
+      showNotification('Cảnh cảnh giới này đã tồn tại!', true);
+      return;
+    }
+    setProfile({
+      ...profile,
+      ranks: [...profile.ranks, newRank.trim()]
+    });
     setNewRank('');
-    showNotification('Đã lưu tên cấp bậc/cảnh giới tu tiên mới!');
+    showNotification('Đã lưu cảnh giới.');
   };
 
   const handleAddCurrency = () => {
     if (!newCurrency.trim()) return;
-    setProfile(p => ({
-      ...p,
-      currencies: [...p.currencies, newCurrency.trim()]
-    }));
+    if (profile.currencies.includes(newCurrency.trim())) {
+      showNotification('Tiền tệ này đã tồn tại!', true);
+      return;
+    }
+    setProfile({
+      ...profile,
+      currencies: [...profile.currencies, newCurrency.trim()]
+    });
     setNewCurrency('');
-    showNotification('Đã thêm đơn vị tiền tệ trao đổi!');
+    showNotification('Đã ghim tiền tệ.');
   };
 
   const handleAddRule = () => {
     if (!newRule.trim()) return;
-    setProfile(p => ({
-      ...p,
-      rules: [...p.rules, newRule.trim()]
-    }));
-    setNewRule('');
-    showNotification('Thiết lập quy luật thế giới thành công!');
-  };
-
-  const handleRemoveProfileArrayItem = (category: 'cultivationSystem' | 'ranks' | 'currencies' | 'rules', idx: number) => {
-    setProfile(p => ({
-      ...p,
-      [category]: p[category].filter((_, i) => i !== idx)
-    }));
-    showNotification('Đã loại bỏ thiết chế bối cảnh.');
-  };
-
-  // Step 3 character helpers
-  const handleSaveCharacter = () => {
-    if (!charFormName.trim()) {
-      showNotification('Vui lòng nhập Tên Nhân Vật vật phẩm!', true);
+    if (profile.rules.includes(newRule.trim())) {
+      showNotification('Pháp luật thiên địa này đã tồn tại!', true);
       return;
     }
+    setProfile({
+      ...profile,
+      rules: [...profile.rules, newRule.trim()]
+    });
+    setNewRule('');
+    showNotification('Đã ghi khắc bộ quy tắc thiên địa bối cảnh.');
+  };
 
-    const details: Character = {
+  const handleRemoveProfileArrayItem = (key: 'cultivationSystem' | 'ranks' | 'currencies' | 'rules', idx: number) => {
+    const arr = [...profile[key]];
+    arr.splice(idx, 1);
+    setProfile({ ...profile, [key]: arr });
+    showNotification('Đã gỡ bỏ bối cảnh thành phần.');
+  };
+
+  const handleSaveCharacter = () => {
+    if (!charFormName.trim()) {
+      showNotification('Phải ghi danh tính / tên nhân vật!', true);
+      return;
+    }
+    const newChar: Character = {
       id: editCharacterId || `char-${Date.now()}`,
-      name: charFormName,
+      name: charFormName.trim(),
       gender: charFormGender,
-      biography: charFormBio,
-      personality: charFormPersonality,
-      skills: charFormSkills,
-      startingPower: charFormPower,
+      biography: charFormBio.trim() || 'Nhân vật bí mật chưa hé lộ thần hồn.',
+      personality: charFormPersonality.trim(),
+      skills: charFormSkills.trim(),
+      startingPower: charFormPower.trim(),
       relationships: ''
     };
 
+    let updatedChars = [...profile.characters];
     if (editCharacterId) {
-      setProfile(p => ({
-        ...p,
-        characters: p.characters.map(c => c.id === editCharacterId ? details : c)
-      }));
-      showNotification('Đã cập nhật chi tiết nhân vật!');
+      updatedChars = updatedChars.map(c => c.id === editCharacterId ? newChar : c);
+      showNotification(`Chỉnh sửa nhân vật ${charFormName} thành hệ thống.`);
     } else {
-      setProfile(p => ({
-        ...p,
-        characters: [...p.characters, details]
-      }));
-      showNotification('Đã lưu thêm nhân vật mới vào hồ sơ!');
+      updatedChars.push(newChar);
+      showNotification(`Đã tạo hồ sơ cho ${charFormName}.`);
     }
 
-    // Reset Form
+    setProfile({ ...profile, characters: updatedChars });
     setEditCharacterId(null);
     setCharFormName('');
     setCharFormBio('');
@@ -398,148 +347,133 @@ export default function App() {
     setCharFormPower('');
   };
 
-  const handleStartEditCharacter = (char: Character) => {
-    setEditCharacterId(char.id);
-    setCharFormName(char.name);
-    setCharFormGender(char.gender);
-    setCharFormBio(char.biography);
-    setCharFormPersonality(char.personality);
-    setCharFormSkills(char.skills);
-    setCharFormPower(char.startingPower);
+  const handleStartEditCharacter = (c: Character) => {
+    setEditCharacterId(c.id);
+    setCharFormName(c.name);
+    setCharFormGender(c.gender);
+    setCharFormBio(c.biography);
+    setCharFormPersonality(c.personality || '');
+    setCharFormSkills(c.skills || '');
+    setCharFormPower(c.startingPower || '');
+    setProfileStep(3);
+    showNotification(`Đã nạp thông số ${c.name} lên bảng hiệu chỉnh.`);
   };
 
   const handleDeleteCharacter = (id: string) => {
-    setProfile(p => ({
-      ...p,
-      characters: p.characters.filter(c => c.id !== id)
-    }));
-    if (editCharacterId === id) {
-      setEditCharacterId(null);
-    }
-    showNotification('Đã xóa nhân vật khỏi hồ sơ tác phẩm.');
-  };
-
-  const handleResetDraft = () => {
-    if (window.confirm('Bạn có thực sự muốn phục hồi hồ sơ mẫu Tuyết Tình Kiếm Cảnh không? Hành động này sẽ thay thế hồ sơ bối cảnh cốt truyện hiện tại.')) {
-      setProfile(DEFAULT_PROFILE);
-      setChapters(DEFAULT_CHAPTERS);
-      setSelectedChapterId(DEFAULT_CHAPTERS[0].id);
-      showNotification('Đã hoàn chế tác phẩm về cốt truyện mẫu!');
+    if (confirm('Sinh tử vô thường, bạn có chắc chắn muốn trục xuất nhân vật này khỏi hồ sơ?')) {
+      const updated = profile.characters.filter(c => c.id !== id);
+      setProfile({ ...profile, characters: updated });
+      if (editCharacterId === id) setEditCharacterId(null);
+      showNotification('Đã xóa bỏ nhân vật.');
     }
   };
 
-  // call full-stack Express generate chapter API
+  const handleDriveSave = async () => {
+    try {
+      showNotification('Đang gửi hồ sơ lên Google Drive...');
+      const res = await fetch('/api/drive/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile, chapters, settings })
+      });
+      if (res.ok) {
+        const out = await res.json();
+        if (out.fileId) setDriveFileId(out.fileId);
+        showNotification('Đã đóng ấn và gửi nhớ mây thành công!');
+      } else {
+        throw new Error('Từ chối lưu trữ.');
+      }
+    } catch (err: any) {
+      showNotification(err.message || 'Lỗi lưu trữ mây.', true);
+    }
+  };
+
+  const handleDriveLoad = async () => {
+    try {
+      showNotification('Đang lục tìm hồ sơ của bạn trên Drive...');
+      const res = await fetch('/api/drive/get');
+      if (res.ok) {
+        const out = await res.json();
+        if (out.profile && out.chapters) {
+          setProfile(out.profile);
+          setChapters(out.chapters);
+          if (out.settings) setSettings(out.settings);
+          setSelectedChapterId(out.chapters[0]?.id || '');
+          showNotification('Đã nạp lại bối cảnh lưu trữ mây thành công!');
+        } else {
+          showNotification('Chưa tìm thấy bản thảo đã đồng bộ trên Drive!', true);
+        }
+      } else {
+         throw new Error('Không thể tiếp cận Server.');
+      }
+    } catch (err: any) {
+       showNotification(err.message || 'Lỗi tải hồ sơ mây.', true);
+    }
+  };
+
   const handleCallAIGeneration = async () => {
     if (!activeChapter) return;
     setIsGenerating(true);
-    setAiStepFeedback('Khởi động động cơ ORINLO-CORE AI...');
-
-    const feedCycles = [
-      'Đại sư ORINLO đang thấm thấu Hồ sơ tu luyện và nhân vật...',
-      'Đang dệt bối cảnh không gian năm giác quan kỳ ảo...',
-      'Khảo sát kịch tính xúc cảm và chuyển biến tâm mạch sâu xa...',
-      'Đang phóng bút sáng tác chi tiết thăng hoa nghệ thuật...'
-    ];
-
-    let cycleIndex = 0;
+    setAiStepFeedback('Đang kết nối thần cốt linh thức...');
+    
+    let stepCount = 0;
     const interval = setInterval(() => {
-      if (cycleIndex < feedCycles.length) {
-        setAiStepFeedback(feedCycles[cycleIndex]);
-        cycleIndex++;
-      }
-    }, 2800);
+      stepCount++;
+      if (stepCount === 1) setAiStepFeedback('Trích xuất chỉ số tu vi bối cảnh sườn bối kịch...');
+      if (stepCount === 2) setAiStepFeedback('Đồng chỉnh ngũ giác quan & cấu hình bút pháp...');
+      if (stepCount === 3) setAiStepFeedback(`Đóng dệt văn phong ${settings.customTone}...`);
+      if (stepCount === 4) setAiStepFeedback('Giải tỏa linh khí viết áng văn thăng hoa nhục cảm...');
+    }, 2500);
 
     try {
-      // Gather context of previous chapters if we choose writeNew or continue
-      const previousChaptersText = chapters
-        .filter(c => c.number < activeChapter.number)
-        .map(c => `[Chương ${c.number}: ${c.title}]\n${c.content}`)
-        .join('\n\n');
-
-      const response = await fetch('/api/generate-chapter', {
+      const res = await fetch('/api/generate-chapter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           profile,
+          chapter: activeChapter,
           settings,
-          currentChapter: activeChapter,
-          previousChaptersText,
           actionType,
           userInstruction
         })
       });
 
-      const data = await response.json();
       clearInterval(interval);
 
-      if (!response.ok || data.error) {
-        throw new Error(data.error || 'Lỗi không xác định khi liên kết AI.');
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'Gemini không phản hồi đúng dạng.');
       }
 
-      const generatedProse = data.content;
-      const updates = data.characterUpdates || [];
-      const suggestedPaths = data.suggestedPaths || [];
-      const profileUpdates = data.storyProfileUpdates;
-
-      // Process automatic story profile updates
-      if (profileUpdates) {
-        setProfile(p => ({ ...p, ...profileUpdates }));
-        showNotification('AI đã tự động cập nhật Hồ sơ tác phẩm!');
-      }
-
-      // Process automatic character updates
-      if (updates.length > 0) {
-        let addedCount = 0;
-        setProfile(p => {
-          const currentNames = p.characters.map(c => c.name.toLowerCase());
-          const newChars = updates.filter((u: any) => !currentNames.includes(u.name.toLowerCase())).map((u: any) => ({
-            ...u,
-            id: `char-${Date.now()}-${Math.random() * 1000}`
-          }));
-          
-          if (newChars.length > 0) {
-            addedCount = newChars.length;
-            return { ...p, characters: [...p.characters, ...newChars] };
+      const out = await res.json();
+      if (out.content) {
+        let contentToSave = out.content;
+        if (actionType === 'continue' && activeChapter.content) {
+          contentToSave = `${activeChapter.content}\n\n${out.content}`;
+        }
+        
+        setChapters(prev => prev.map(c => {
+          if (c.id === selectedChapterId) {
+            const up = {
+              ...c,
+              content: contentToSave,
+              wordCount: contentToSave.trim().split(/\s+/).filter(Boolean).length
+            };
+            if (out.suggestedPaths) up.suggestedPaths = out.suggestedPaths;
+            return up;
           }
-          return p;
-        });
-        
-        if (addedCount > 0) {
-          showNotification(`AI đã phát hiện và thêm ${addedCount} nhân vật mới vào hồ sơ!`);
-        }
-      }
+          return c;
+        }));
 
-      // Update chapters depending on actionType
-      const updatedChapters = chapters.map(c => {
-        if (c.id !== activeChapter.id) return c;
-        
-        let newContent = c.content;
-        if (actionType === 'continue') {
-          newContent = c.content ? `${c.content}\n\n${generatedProse}` : generatedProse;
-        } else {
-          newContent = generatedProse;
-        }
-        
-        return {
-          ...c,
-          content: newContent,
-          suggestedPaths: suggestedPaths,
-          wordCount: newContent.trim().split(/\s+/).filter(Boolean).length
-        };
-      });
-      
-      setChapters(updatedChapters);
-
-      if (actionType === 'continue') {
-        showNotification('AI đã hoàn viết tiếp nối phân hợp lưu chuyển mượt mà!');
+        setUserInstruction('');
+        showNotification('Thần thức bão bùng! Áng văn đắt giá đã lộ diện!');
       } else {
-        showNotification('Đồng sáng tác tiểu thuyết thành công! Hãy đọc văn bản bên dưới.');
+        throw new Error('Áng văn bị tản mác không có hồi đáp.');
       }
-      setUserInstruction(''); // clear input box
 
     } catch (err: any) {
       clearInterval(interval);
-      showNotification(err.message || 'Kết nối bị ngắt quãng. Vui lòng thử lại.', true);
+      showNotification(err.message || 'Lỗi kết nối hoặc kịch cảnh bị gián đoạn.', true);
     } finally {
       setIsGenerating(false);
       setAiStepFeedback('');
@@ -547,28 +481,9 @@ export default function App() {
   };
 
   return (
-    <div id="main-app-container" onMouseMove={handleMouseMove} className="min-h-screen bg-[#eaecdf] text-[#2d2c25] font-sans antialiased flex flex-col pointer-events-auto custom-scrollbar">
+    <div id="main-app-container" className="min-h-screen bg-[#eae8de] text-[#2d2c25] font-sans antialiased flex flex-col pointer-events-auto custom-scrollbar pb-32">
       
-      {/* Particle Overlay */}
-      <div className="fixed inset-0 pointer-events-none z-[1000] overflow-hidden">
-        {particles.map(p => (
-          <motion.div
-            key={p.id}
-            initial={{ opacity: 1, x: p.x, y: p.y, scale: 1 }}
-            animate={{
-              opacity: 0,
-              x: p.x + (Math.random() * 100 - 50),
-              y: p.y + (Math.random() * 100 - 50),
-              scale: 0,
-            }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            onAnimationComplete={() => setParticles(prev => prev.filter(part => part.id !== p.id))}
-            className={`absolute w-1 h-1 rounded-full ${p.color} pointer-events-none shadow-[0_0_4px_rgba(255,255,255,0.6)]`}
-          />
-        ))}
-      </div>
-
-      {/* Dynamic Alerts / Notification */}
+      {/* Notifications */}
       <AnimatePresence>
         {notification && (
           <motion.div 
@@ -576,7 +491,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.9 }}
             id="notification-bubble"
-            className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3.5 rounded-xl shadow-xl border text-sm font-medium transition-all ${
+            className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3.5 rounded-2xl shadow-xl border text-sm font-medium transition-all ${
               notification.isError 
               ? 'bg-red-50 border-red-200 text-red-800 shadow-red-200/40' 
               : 'bg-[#faf6eb] border-[#decb96] text-amber-950 shadow-amber-900/10'
@@ -588,612 +503,129 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* TOP DECORATIVE HEADER BAR - Refined for App Feel */}
-      <motion.header 
-        id="app-header" 
-        className="fixed top-0 left-0 right-0 z-40 bg-[#161512]/95 border-b border-[#2e2a22] text-amber-50/90 shadow-md backdrop-blur-sm"
-        initial={{ y: 0 }}
-        animate={{ y: isHeaderVisible ? 0 : -100 }}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
-      >
-        <div className="max-w-[98%] mx-auto px-4 py-2 flex items-center justify-between">
-          
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-gradient-to-br from-amber-600 to-red-800 rounded-lg shadow-inner border border-amber-500/30">
-              <PenTool className="w-4 h-4 text-amber-100" />
+      {/* HEADER SECTION - Pitch Dark Elegant Slate */}
+      {isHeaderVisible && (
+        <motion.header 
+          id="app-header" 
+          className="bg-[#161512] text-amber-100/90 border-b border-[#2e2a22] shadow-lg sticky top-0 z-45"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-[#2a2822] to-[#1a1915] rounded-xl border border-amber-600/30 flex items-center justify-center shadow-inner">
+                <Feather className="w-6 h-6 text-[#decb96]" />
+              </div>
+              <div>
+                <h1 id="app-main-title" className="font-serif font-black text-[#f4f2eb] text-lg tracking-tight leading-tight">
+                  Hợp Tác Viết Tiểu Thuyết AI
+                </h1>
+                <p className="text-[11px] text-[#decb96]/75 font-serif italic mt-0.5">
+                  Bút pháp Orinlo Core &amp; Hồ Sơ Thế Giới Hoàn Chỉnh
+                </p>
+              </div>
             </div>
-            <h1 className="font-serif font-bold text-lg text-amber-100 tracking-tight">
-              Co-Write <span className="text-amber-500/80 font-normal">Workspace</span>
-            </h1>
+            
+            <div className="bg-[#881337] text-white text-[9px] font-sans font-bold px-2.5 py-1.5 rounded-lg tracking-widest uppercase border border-red-900/20 shadow-sm shrink-0">
+              CO-WRITE WORKSPACE
+            </div>
           </div>
+        </motion.header>
+      )}
+
+      {/* PRIMARY FLOW CONTAINER - Centered Column */}
+      <main className="max-w-2xl mx-auto w-full px-4 pt-4 pb-20 space-y-4 flex-1">
+        
+        {/* SPECIMEN ACTIVE CONTROLS ROW */}
+        <div className="flex items-center justify-between gap-3 bg-[#FAF9F5]/80 p-2 rounded-2xl border border-[#dbd8cf]/30 shadow-6xs">
+          <button 
+            id="reset-state-btn"
+            onClick={handleResetDraft}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-sans font-bold text-[#b45309] border border-amber-800/20 hover:border-amber-700 bg-white rounded-xl transition-all shadow-6xs cursor-pointer select-none"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-amber-700" />
+            <span>Dùng Bối Cảnh Mẫu</span>
+          </button>
 
           <div className="flex items-center gap-2">
-            <button 
-              onClick={() => {
-                const data = JSON.stringify({ profile, chapters, settings }, null, 2);
-                const blob = new Blob([data], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `novel_profile_${new Date().toISOString().slice(0, 10)}.json`;
-                a.click();
-              }}
-              className="px-3 py-1 text-[11px] bg-blue-800 text-white rounded-lg hover:bg-blue-700"
-            >
-              Xuất Hồ sơ
-            </button>
-            <label className="px-3 py-1 text-[11px] bg-blue-800 text-white rounded-lg hover:bg-blue-700 cursor-pointer">
-              Nhập Hồ sơ
-              <input type="file" accept=".json" className="hidden" onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                  try {
-                    const data = JSON.parse(event.target?.result as string);
-                    if (data.profile && data.chapters && data.settings) {
-                      setProfile(data.profile);
-                      setChapters(data.chapters);
-                      setSettings(data.settings);
-                      setSelectedChapterId(data.chapters[0]?.id || '');
-                      showNotification('Đã nhập hồ sơ thành công!');
-                    } else {
-                      showNotification('File JSON không hợp lệ!', true);
-                    }
-                  } catch {
-                    showNotification('Lỗi khi đọc file!', true);
-                  }
-                };
-                reader.readAsText(file);
-              }} />
-            </label>
             {!isLoggedIn ? (
-              <a href="/api/auth/login" className="px-3 py-1 text-[11px] bg-white text-gray-900 rounded-lg hover:bg-gray-100">Đăng nhập</a>
+              <a href="/api/auth/login" className="px-3 py-1.5 text-[11px] font-bold bg-[#161512] text-[#f4f2eb] rounded-xl border border-[#2e2a22] hover:bg-black transition-colors select-none">
+                Đăng nhập Drive
+              </a>
             ) : (
-              <>
-                <button onClick={handleDriveLoad} className="px-3 py-1 text-[11px] bg-emerald-800 text-white rounded-lg hover:bg-emerald-700">Tải Drive</button>
-                <button onClick={handleDriveSave} className="px-3 py-1 text-[11px] bg-amber-800 text-white rounded-lg hover:bg-amber-700">Lưu Drive</button>
-              </>
+              <div className="flex gap-1.5">
+                <button onClick={handleDriveLoad} className="px-2.5 py-1 text-[10px] uppercase font-bold bg-emerald-950 text-emerald-200 border border-emerald-800/40 rounded-lg hover:bg-emerald-900 transition-colors cursor-pointer">Tải Drive</button>
+                <button onClick={handleDriveSave} className="px-2.5 py-1 text-[10px] uppercase font-bold bg-amber-950 text-amber-200 border border-amber-800/40 rounded-lg hover:bg-amber-900 transition-colors cursor-pointer">Lưu Drive</button>
+              </div>
             )}
-            <button 
-              id="header-toggle-btn"
-              onClick={() => setIsHeaderVisible(!isHeaderVisible)}
-              className="p-1.5 text-xs bg-amber-950 border border-amber-800 rounded text-amber-300 hover:text-white"
-            >
-              {isHeaderVisible ? 'Ẩn' : 'Hiện'}
-            </button>
           </div>
         </div>
-      </motion.header>
 
-      {/* WORKSPACE AREA Container - TWO PANEL LAYOUT */}
-      <main id="app-main-workspace" className="flex-1 w-full mx-auto p-4 pt-16 grid grid-cols-1 md:grid-cols-12 gap-4 h-screen">
-        
-        {/* LEFT PANEL: NAVIGATION & SETTINGS */}
-        <section id="sidebar-story-profile" className="md:col-span-4 lg:col-span-3 flex flex-col gap-4 h-[calc(100vh-80px)] overflow-hidden">
-          <div className="app-panel flex flex-col h-full bg-[#FAF9F5]">
+        {/* ----------------- TAB 1: VIẾT TRUYỆN ----------------- */}
+        {activeTab === 'write' && (
+          <div className="space-y-4 animate-fade-in pb-10">
             
-            {/* Sidebar Title Header */}
-            <div className="p-4 bg-gradient-to-r from-[#1c1a16] to-[#272621] text-amber-100 border-b border-[#ddda9a]/10 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Compass className="w-5 h-5 text-amber-400" />
-                <h2 className="font-serif font-semibold text-base">Hồ Sơ Cốt Truyện</h2>
-              </div>
-            </div>
-
-            {/* Profile Step Selector Bar */}
-            <div className="grid grid-cols-3 border-b border-[#ebdcca] bg-[#fdfcf9] font-medium text-xs text-[#5e5a52]">
-              <button 
-                id="step-1-tab-btn"
-                onClick={() => setProfileStep(1)}
-                className={`flex flex-col items-center gap-0.5 py-3 border-b-2 transition-all ${
-                  profileStep === 1 
-                  ? 'border-red-800 text-red-950 bg-[#f4f2eb]' 
-                  : 'border-transparent hover:text-black hover:bg-[#FAF9F5]'
-                }`}
-              >
-                <Layers className="w-4 h-4 text-emerald-700 font-bold" />
-                <span>1. Tổng Quan</span>
-              </button>
-              <button 
-                id="step-2-tab-btn"
-                onClick={() => setProfileStep(2)}
-                className={`flex flex-col items-center gap-0.5 py-3 border-b-2 transition-all ${
-                  profileStep === 2 
-                  ? 'border-red-800 text-red-950 bg-[#f4f2eb]' 
-                  : 'border-transparent hover:text-black hover:bg-[#FAF9F5]'
-                }`}
-              >
-                <Coins className="w-4 h-4 text-amber-700" />
-                <span>2. Thiết Chế</span>
-              </button>
-              <button 
-                id="step-3-tab-btn"
-                onClick={() => setProfileStep(3)}
-                className={`flex flex-col items-center gap-0.5 py-3 border-b-2 transition-all ${
-                  profileStep === 3 
-                  ? 'border-red-800 text-red-950 bg-[#f4f2eb]' 
-                  : 'border-transparent hover:text-black hover:bg-[#FAF9F5]'
-                }`}
-              >
-                <Users className="w-4 h-4 text-[#881337]" />
-                <span>3. Nhân Vật</span>
-              </button>
-            </div>
-
-            {/* STEP SCROLL CONTENT PANEL */}
-            <div className="p-4 flex-1 overflow-y-auto max-h-[640px] md:max-h-[700px] lg:max-h-[800px] custom-scrollbar bg-[#FAF9F5]">
-
-              {/* BƯỚC 1: TỔNG QUAN */}
-              {profileStep === 1 && (
-                <div id="setup-step1-pane" className="space-y-4 animate-fade-in">
-                  <div className="bg-amber-50/50 border border-amber-200/50 p-3 rounded-xl text-xs text-amber-900 leading-relaxed">
-                    <span className="font-bold">Bước 1: Tổng Quan Ý Tưởng</span> — Điền thông tin cốt lõi để làm kim chỉ nam vững vàng cho AI. Toàn bộ các bối cảnh bên dưới sẽ cách biệt độc lập để bạn hoàn thiện chi tiết nhất.
-                  </div>
-
-                  {/* Tên truyện */}
-                  <div>
-                    <label className="block text-xs font-semibold text-[#5e5a52] mb-1 uppercase tracking-wider">Tên Truyện Tiểu Thuyết</label>
-                    <input 
-                      id="novel-title-input"
-                      type="text"
-                      className="w-full text-sm font-serif font-bold bg-white border border-[#dbd8cf] rounded-xl px-3 py-2.5 outline-none focus:border-amber-600 transition-colors"
-                      placeholder="Nhập tên tiểu thuyết..."
-                      value={profile.title}
-                      onChange={(e) => setProfile({ ...profile, title: e.target.value })}
-                    />
-                  </div>
-
-                  {/* Ý tưởng cốt lõi */}
-                  <div>
-                    <label className="block text-xs font-semibold text-[#5e5a52] mb-1 uppercase tracking-wider">Ý Tưởng Chủ Đạo / Cốt Lõi</label>
-                    <textarea 
-                      id="novel-idea-textarea"
-                      className="w-full h-24 text-xs bg-white border border-[#dbd8cf] rounded-xl p-3 outline-none focus:border-amber-600 transition-colors leading-relaxed resize-none custom-scrollbar"
-                      placeholder="Ý tưởng tổng hợp của tác phẩm là gì..."
-                      value={profile.idea}
-                      onChange={(e) => setProfile({ ...profile, idea: e.target.value })}
-                    />
-                  </div>
-
-                  {/* Ý tưởng bối cảnh thế giới */}
-                  <div>
-                    <label className="block text-xs font-semibold text-[#5e5a52] mb-1 uppercase tracking-wider">Ý Tưởng Bối Cảnh Thế Giới</label>
-                    <textarea 
-                      id="novel-world-textarea"
-                      className="w-full h-24 text-xs bg-white border border-[#dbd8cf] rounded-xl p-3 outline-none focus:border-amber-600 transition-colors leading-relaxed resize-none custom-scrollbar"
-                      placeholder="Mô tả không gian thế giới, lục địa, tiên môn, tông phái vĩ mô..."
-                      value={profile.worldBackground}
-                      onChange={(e) => setProfile({ ...profile, worldBackground: e.target.value })}
-                    />
-                  </div>
-
-                  {/* Ý tưởng khởi đầu */}
-                  <div>
-                    <label className="block text-xs font-semibold text-[#5e5a52] mb-1 uppercase tracking-wider">Ý Tưởng Khởi Đầu (Hook)</label>
-                    <textarea 
-                      id="novel-hook-textarea"
-                      className="w-full h-20 text-xs bg-white border border-[#dbd8cf] rounded-xl p-3 outline-none focus:border-amber-600 transition-colors leading-relaxed resize-none custom-scrollbar"
-                      placeholder="Ví dụ khởi đầu: Đang trốn rượt đuổi, đột ngột bị nhốt cùng hang băng tôn nghiêm truyền ấm áp..."
-                      value={profile.startingHook}
-                      onChange={(e) => setProfile({ ...profile, startingHook: e.target.value })}
-                    />
-                  </div>
+            {/* Card 1: Hồi Chương Đang Viết */}
+            <div className="bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="p-1.5 text-[#881337] bg-red-50 border border-red-100 rounded-xl shrink-0 mt-0.5">
+                  <BookOpen className="w-5 h-5" />
                 </div>
-              )}
-
-              {/* BƯỚC 2: HỆ THỐNG TU LUYỆN, TIỆN TỆ, QUY TẮC */}
-              {profileStep === 2 && (
-                <div id="setup-step2-pane" className="space-y-4 animate-fade-in">
-                  <div className="bg-amber-50/50 border border-amber-200/50 p-3 rounded-xl text-xs text-amber-900 leading-relaxed">
-                    <span className="font-bold">Bước 2: Hệ Thống Bối Cảnh Chi Tiết</span> — Thiết lập chuẩn mực thế giới quan. Để thêm, sử dụng biểu tượng <span className="font-bold">+</span> tương ứng để bổ sung các định chế chặt chẽ.
-                  </div>
-
-                  {/* Hệ thống tu luyện */}
-                  <div className="border border-[#dbd8cf]/80 rounded-xl p-3 bg-[#FCFBF8] shadow-xs">
-                    <label className="block text-xs font-bold text-[#514d45] mb-2 uppercase tracking-wider flex items-center gap-1">
-                      <span>• Hệ Thống Tu Luyện Cốt Lõi</span>
-                    </label>
-                    <div className="flex gap-2 mb-2">
-                      <input 
-                        id="new-cultivation-input"
-                        type="text" 
-                        className="flex-1 text-xs bg-white border border-[#dbd8cf] rounded-lg px-2 text-sm outline-none focus:border-amber-600"
-                        placeholder="Thêm hệ thống mới..."
-                        value={newCultivation}
-                        onChange={(e) => setNewCultivation(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddCultivation()}
-                      />
-                      <button 
-                        id="add-cultivation-btn"
-                        onClick={handleAddCultivation}
-                        className="bg-amber-800 text-amber-50 hover:bg-amber-900 px-3 py-1 rounded-lg hover:shadow-md transition-all text-xs font-bold flex items-center cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                    {profile.cultivationSystem.length === 0 ? (
-                      <p className="text-[11px] text-gray-400 italic">Chưa thiết lập hệ thống tu luyện.</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {profile.cultivationSystem.map((item, i) => (
-                          <span key={i} className="text-xs bg-[#f2ebd9] text-amber-950 px-2.5 py-1 rounded-lg border border-amber-200/60 flex items-center gap-1.5 font-medium">
-                            {item}
-                            <Trash2 className="w-3 h-3 text-red-800 hover:text-red-600 transition-colors cursor-pointer" onClick={() => handleRemoveProfileArrayItem('cultivationSystem', i)} />
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Tên cấp bậc tu luyện */}
-                  <div className="border border-[#dbd8cf]/80 rounded-xl p-3 bg-[#FCFBF8] shadow-xs">
-                    <label className="block text-xs font-bold text-[#514d45] mb-2 uppercase tracking-wider flex items-center gap-1">
-                      <span>• Tên Các Cấp Bậc / Cảnh Giới</span>
-                    </label>
-                    <div className="flex gap-2 mb-2">
-                      <input 
-                        id="new-rank-input"
-                        type="text" 
-                        className="flex-1 text-xs bg-white border border-[#dbd8cf] rounded-lg px-2 text-sm outline-none focus:border-amber-600"
-                        placeholder="VD: Luyện Khí Kỳ, Trúc Cơ, Kim Đan..."
-                        value={newRank}
-                        onChange={(e) => setNewRank(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddRank()}
-                      />
-                      <button 
-                        id="add-rank-btn"
-                        onClick={handleAddRank}
-                        className="bg-amber-800 text-amber-50 hover:bg-amber-900 px-3 py-1 rounded-lg hover:shadow-md transition-all text-xs font-bold flex items-center cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                    {profile.ranks.length === 0 ? (
-                      <p className="text-[11px] text-gray-400 italic">Chưa lập cấp bậc tu luyện.</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {profile.ranks.map((item, i) => (
-                          <span key={i} className="text-xs bg-blue-50 text-blue-900 px-2.5 py-1 rounded-lg border border-blue-200/50 flex items-center gap-1.5 font-mono">
-                            {item}
-                            <Trash2 className="w-3 h-3 text-red-800 hover:text-red-500 cursor-pointer" onClick={() => handleRemoveProfileArrayItem('ranks', i)} />
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Tên tiền tệ */}
-                  <div className="border border-[#dbd8cf]/80 rounded-xl p-3 bg-[#FCFBF8] shadow-xs">
-                    <label className="block text-xs font-bold text-[#514d45] mb-2 uppercase tracking-wider flex items-center gap-1">
-                      <span>• Đơn Vị Tiền Tệ</span>
-                    </label>
-                    <div className="flex gap-2 mb-2">
-                      <input 
-                        id="new-currency-input"
-                        type="text" 
-                        className="flex-1 text-xs bg-white border border-[#dbd8cf] rounded-lg px-2 text-sm outline-none focus:border-amber-600"
-                        placeholder="VD: Linh Thạch Ngũ Sắc, Huyết Ngọc..."
-                        value={newCurrency}
-                        onChange={(e) => setNewCurrency(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddCurrency()}
-                      />
-                      <button 
-                        id="add-currency-btn"
-                        onClick={handleAddCurrency}
-                        className="bg-amber-800 text-amber-50 hover:bg-amber-900 px-3 py-1 rounded-lg hover:shadow-md transition-all text-xs font-bold flex items-center cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                    {profile.currencies.length === 0 ? (
-                      <p className="text-[11px] text-gray-400 italic">Chưa thiết chế tiền tệ bối cảnh.</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {profile.currencies.map((item, i) => (
-                          <span key={i} className="text-xs bg-emerald-50 text-emerald-900 px-2.5 py-1 rounded-lg border border-emerald-200/50 flex items-center gap-1.5 font-medium">
-                            {item}
-                            <Trash2 className="w-3 h-3 text-red-800 hover:text-red-500 cursor-pointer" onClick={() => handleRemoveProfileArrayItem('currencies', i)} />
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Quy tắc thế giới */}
-                  <div className="border border-[#dbd8cf]/80 rounded-xl p-3 bg-[#FCFBF8] shadow-xs">
-                    <label className="block text-xs font-bold text-[#514d45] mb-2 uppercase tracking-wider">
-                      • Luật Lệ & Quy Tắc Vũ Trụ (Mãnh lực)
-                    </label>
-                    <div className="flex gap-2 mb-3">
-                      <input 
-                        id="new-rule-input"
-                        type="text" 
-                        className="flex-1 text-xs bg-white border border-[#dbd8cf] rounded-lg px-2 text-sm outline-none focus:border-amber-600"
-                        placeholder="Ghi quy tắc thế giới rồi bấm +..."
-                        value={newRule}
-                        onChange={(e) => setNewRule(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddRule()}
-                      />
-                      <button 
-                        id="add-rule-btn"
-                        onClick={handleAddRule}
-                        className="bg-amber-800 text-amber-50 hover:bg-amber-900 px-3 py-1 rounded-lg hover:shadow-md transition-all text-xs font-bold flex items-center cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                    {profile.rules.length === 0 ? (
-                      <p className="text-[11px] text-gray-400 italic">Chưa thiết lập quy tắc hành luật.</p>
-                    ) : (
-                      <ul className="space-y-1.5 text-xs text-[#2d2c25]">
-                        {profile.rules.map((item, i) => (
-                          <li key={i} className="flex items-start gap-2 bg-slate-50 border border-slate-200/50 p-2 rounded-lg">
-                            <span className="w-4 h-4 text-[10px] bg-slate-200 border border-slate-300 text-gray-700 font-bold rounded-full flex items-center justify-center shrink-0 mt-0.5">{i+1}</span>
-                            <span className="flex-1 leading-relaxed text-[11px]">{item}</span>
-                            <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-600 cursor-pointer self-center" onClick={() => handleRemoveProfileArrayItem('rules', i)} />
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* BƯỚC 3: BAN NHÂN VẬT THẾ GIỚI CHI TIẾT */}
-              {profileStep === 3 && (
-                <div id="setup-step3-pane" className="space-y-4 animate-fade-in">
-                  <div className="bg-amber-50/50 border border-amber-200/50 p-3 rounded-xl text-xs text-amber-900 leading-relaxed">
-                    <span className="font-bold">Bước 3: Tạo File Thiết Kế Nhân Vật</span> — Khắc họa đầy đủ tên, giới tính, tiểu sử, chỉ số sức mạnh. Bạn có thể biên tập và kiểm tra lại danh sách bất kỳ cơ hội nào.
-                  </div>
-
-                  {/* Character List Header & Modal switch */}
-                  <div className="flex items-center justify-between border-b border-[#ebdcca] pb-2 font-serif font-bold text-sm text-[#413c33]">
-                    <h3>Quản lý Nhân Vật ({profile.characters.length})</h3>
-                    <button 
-                      id="char-form-reset-btn"
-                      onClick={() => {
-                        setEditCharacterId(null);
-                        setCharFormName('');
-                        setCharFormBio('');
-                        setCharFormPersonality('');
-                        setCharFormSkills('');
-                        setCharFormPower('');
-                      }}
-                      className="text-[10px] uppercase font-sans font-bold text-amber-700 hover:text-amber-900 tracking-wider flex items-center gap-0.5 outline-none cursor-pointer"
-                    >
-                      <UserPlus className="w-3 h-3" />
-                      <span>Xóa trắng form</span>
-                    </button>
-                  </div>
-
-                  {/* Character Creation & Edit Form Block */}
-                  <div id="character-inline-form-box" className="bg-[#FAF9F5] border border-amber-800/10 p-3.5 rounded-xl space-y-2.5 pb-4 bg-gradient-to-br from-amber-50/30 to-rose-50/10">
-                    <div className="text-xs font-extrabold text-amber-950 flex items-center gap-1">
-                      <PenTool className="w-3.5 h-3.5 text-red-800" />
-                      <span>{editCharacterId ? 'ĐANG BIÊN TẬP NHÂN VẬT' : 'THÊM NHÂN VẬT MỚI'}</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[10px] font-bold text-gray-500 uppercase">Tên nhân vật *</label>
-                        <input 
-                          id="char-name-input"
-                          type="text" 
-                          className="w-full text-xs bg-white border border-[#dbd8cf] rounded-lg px-2 py-1.5 mt-0.5 outline-none focus:border-amber-600"
-                          placeholder="Mộ Dung Nguyệt"
-                          value={charFormName}
-                          onChange={(e) => setCharFormName(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-gray-500 uppercase">Giới tính</label>
-                        <select 
-                          id="char-gender-select"
-                          className="w-full text-xs bg-white border border-[#dbd8cf] rounded-lg px-2 py-1.5 mt-0.5 outline-none focus:border-amber-600"
-                          value={charFormGender}
-                          onChange={(e) => setCharFormGender(e.target.value)}
-                        >
-                          <option value="Nam">Nam Nhân</option>
-                          <option value="Nữ">Nữ Nhân</option>
-                          <option value="Khác">Phi Nhân / Linh Thú</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase">Tính Cách & Thần thái</label>
-                      <input 
-                        id="char-personality-input"
-                        type="text" 
-                        className="w-full text-xs bg-white border border-[#dbd8cf] rounded-lg px-2 py-1.5 mt-0.5 outline-none focus:border-amber-600"
-                        placeholder="Lạnh lùng võ thuật, trung trinh ẩn giấu..."
-                        value={charFormPersonality}
-                        onChange={(e) => setCharFormPersonality(e.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase">Kỹ Năng / Cấp chiêu thức</label>
-                      <input 
-                        id="char-skills-input"
-                        type="text" 
-                        className="w-full text-xs bg-white border border-[#dbd8cf] rounded-lg px-2 py-1.5 mt-0.5 outline-none focus:border-amber-600"
-                        placeholder="Sương Hàn Độc Quyết, Thuận Không Trảm..."
-                        value={charFormSkills}
-                        onChange={(e) => setCharFormSkills(e.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase">Sức Mạnh Khởi Đầu / Chỉ Số Sức Sống</label>
-                      <input 
-                        id="char-power-input"
-                        type="text" 
-                        className="w-full text-xs bg-white border border-[#dbd8cf] rounded-lg px-2 py-1.5 mt-0.5 outline-none focus:border-amber-600"
-                        placeholder="Công lực: 480, Thể lực: Thuần Dương..."
-                        value={charFormPower}
-                        onChange={(e) => setCharFormPower(e.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase">Tiểu Sử / Điển Tích</label>
-                      <textarea 
-                        id="char-bio-textarea"
-                        className="w-full h-16 text-xs bg-white border border-[#dbd8cf] rounded-lg p-2 mt-0.5 outline-none focus:border-amber-600 leading-normal resize-none custom-scrollbar"
-                        placeholder="Vốn mang thiên cốt chi hỏa bị giấu đi..."
-                        value={charFormBio}
-                        onChange={(e) => setCharFormBio(e.target.value)}
-                      />
-                    </div>
-
-                    <button 
-                      id="char-save-btn"
-                      onClick={handleSaveCharacter}
-                      className="w-full bg-[#881337] hover:bg-red-800 text-white font-bold py-2 px-3 rounded-lg text-xs tracking-wider transition-colors shadow-xs flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <Save className="w-3.5 h-3.5" />
-                      <span>{editCharacterId ? 'LƯU BIẾN ĐỔI NHÂN VẬT' : 'THÊM NHÂN VẬT LIỀN'}</span>
-                    </button>
-                  </div>
-
-                  {/* Render Character List with edit buttons */}
-                  <div className="space-y-2 pt-2">
-                    {profile.characters.map((c) => (
-                      <div 
-                        key={c.id} 
-                        className={`p-3 rounded-xl border transition-all ${
-                          editCharacterId === c.id 
-                          ? 'bg-amber-50 border-amber-500 shadow-md' 
-                          : 'bg-white border-[#dbd8cf]/80 shadow-xs hover:border-amber-400'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <span className="font-serif font-semibold text-sm text-[#41392b] flex items-center gap-1.5">
-                              {c.name}
-                              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-sans font-bold leading-none ${
-                                c.gender === 'Nam' 
-                                ? 'bg-indigo-50 border border-indigo-200 text-indigo-700' 
-                                : 'bg-rose-50 border border-rose-200 text-rose-700'
-                              }`}>
-                                {c.gender}
-                              </span>
-                            </span>
-                          </div>
-                          <div className="flex gap-2">
-                            <button 
-                              onClick={() => handleStartEditCharacter(c)}
-                              className="text-[10px] text-blue-800 hover:underline outline-none cursor-pointer"
-                            >
-                              Sửa
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteCharacter(c.id)}
-                              className="text-red-700 hover:text-red-500 outline-none cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-1 bg-[#fcfbf9]/90 p-1.5 rounded-lg text-[10px] text-gray-600">
-                          <div><span className="font-bold">Tính cách:</span> {c.personality || '---'}</div>
-                          <div><span className="font-bold">Kỹ năng:</span> {c.skills || '---'}</div>
-                          <div className="col-span-2 mt-0.5"><span className="font-bold text-amber-950">Chỉ số:</span> <span className="font-mono">{c.startingPower || '---'}</span></div>
-                        </div>
-
-                        <p className="text-[10px] leading-relaxed text-gray-500 mt-2 line-clamp-2 italic">
-                          "{c.biography}"
-                        </p>
-                      </div>
+                <div className="flex-1 min-w-0">
+                  <span className="block text-[9.5px] text-gray-400 font-sans font-extrabold tracking-wider uppercase">ĐANG ĐỒNG HÀNH VIẾT</span>
+                  <select 
+                    id="chapter-workspace-select"
+                    className="w-full bg-transparent font-serif font-black text-[#2d2c25] outline-none border-b border-[#ebdcca] pr-8 text-base focus:border-[#881337] pb-1 cursor-pointer"
+                    value={activeChapter?.id || ''}
+                    onChange={(e) => setSelectedChapterId(e.target.value)}
+                  >
+                    {chapters.map(c => (
+                      <option key={c.id} value={c.id}>
+                        Hồi {c.number}: {c.title.replace(/^(Chương|Hồi|Hồi\s*\d+:)\s*/i, '')}
+                      </option>
                     ))}
-                  </div>
+                  </select>
                 </div>
-              )}
+              </div>
 
-            </div>
-
-            {/* Sidebar Sticky Footer info */}
-            <div className="p-3.5 bg-[#f5f3eb] border-t border-[#ebdcca] text-[10.5px] text-[#5e5a52] text-center font-serif leading-normal italic">
-              "Ý đồ phác họa chuẩn giúp AI không bao giờ đi lệch con đường nghệ thuật đã chọn."
-            </div>
-
-          </div>
-
-        </section>
-
-        {/* RIGHT COLUMN: CHAPTER WORKSPACE & AI INTERACTIVE PROCESS */}
-        <section id="main-editor-workspace" className="md:col-span-7 lg:col-span-8 flex flex-col gap-4">
-          
-          {/* TOP CONTROLS: CHỌN CHƯƠNG & KHỞI TẠO CHƯƠNG */}
-          <div className="bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-4">
-            
-            <div className="flex items-center gap-3">
-              <BookOpen className="w-5 h-5 text-[#881337] shrink-0" />
-              <div>
-                <label className="block text-[10px] text-gray-400 font-mono">ĐANG ĐỒNG HÀNH VIẾT</label>
-                <select 
-                  id="chapter-workspace-select"
-                  className="bg-transparent font-serif font-bold text-[#443825] outline-none border-b border-amber-900/40 pr-8 text-sm focus:border-amber-600 pb-0.5"
-                  value={selectedChapterId}
-                  onChange={(e) => setSelectedChapterId(e.target.value)}
+              <div className="flex gap-2">
+                <button 
+                  id="create-new-chap-btn"
+                  onClick={handleCreateChapter}
+                  className="bg-[#2a2822] hover:bg-black text-amber-100 px-4 py-2.5 rounded-xl text-xs font-bold shadow-6xs flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  {chapters.map(c => (
-                    <option key={c.id} value={c.id}>
-                      Hồi {c.number}: {c.title.replace(/^(Chương|Hồi)\s*\d+:\s*/i, '')}
-                    </option>
-                  ))}
-                </select>
+                  <Plus className="w-4 h-4" />
+                  <span>Thêm Chương Mới</span>
+                </button>
+                <button 
+                  id="delete-current-chap-btn"
+                  onClick={(e) => handleDeleteChapter(activeChapter.id, e)}
+                  className="hover:bg-red-50 text-red-800 border border-red-200 px-3 py-2 rounded-xl text-xs flex items-center justify-center transition-colors cursor-pointer bg-white"
+                  title="Xóa chương hiện tại"
+                >
+                  <Trash2 className="w-4 h-4 text-red-600" />
+                </button>
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <button 
-                id="create-new-chap-btn"
-                onClick={handleCreateChapter}
-                className="bg-[#2a2822] hover:bg-black text-amber-100 px-3 py-2 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Thêm Chương Mới</span>
-              </button>
-              <button 
-                id="delete-current-chap-btn"
-                onClick={(e) => handleDeleteChapter(activeChapter.id, e)}
-                className="hover:bg-red-50 text-red-800 border border-red-200 px-2.5 py-1.5 rounded-lg text-xs flex items-center transition-colors cursor-pointer"
-                title="Xóa chương hiện tại"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-
-          </div>
-
-          {/* ACTIVE WORKSPACE AREA PARCHMENT VIEW */}
-          <div className="bg-[#FAF9F5] border border-[#dbd8cf] rounded-2xl shadow-sm flex flex-col overflow-hidden">
-            
-            {/* Writer Config Drawer */}
-            <div className="p-4 bg-gradient-to-r from-[#efebe1] to-[#e7e1d4] border-b border-[#dbd8cf] space-y-3">
-              
+            {/* Card 2: Cấu Hình Bút Pháp */}
+            <div className="bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-[#3a372d] tracking-wide uppercase flex items-center gap-1">
+                <span className="text-xs font-extrabold text-[#3a372d] tracking-wide uppercase flex items-center gap-1.5">
                   <Settings className="w-4 h-4 text-amber-800" />
                   <span>CẤU HÌNH BÚT PHÁP SÁNG TÁC</span>
                 </span>
-                <span className="text-[10px] text-amber-900 bg-amber-50-40 border border-amber-300 font-mono px-2 py-0.5 rounded uppercase">
+                <span className="text-[10px] text-[#ae3813] bg-[#fffbeb] border border-[#d97706]/40 font-mono px-2 py-0.5 rounded font-extrabold uppercase tracking-wider">
                   ORINLO INTEGRATED
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                
-                {/* Mode Select */}
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-[10.5px] font-bold text-[#555042] mb-1">Mức Độ Chi Tiết (Orinlo Core)</label>
+                  <label className="block text-[11px] font-bold text-[#555042] mb-1.5">Mức Độ Chi Tiết (Orinlo Core)</label>
                   <select 
                     id="writing-mode-select"
-                    className="w-full text-xs bg-white border border-[#cfcabb] rounded-lg px-2.5 py-1.8 outline-none focus:border-amber-700"
+                    className="w-full text-xs bg-white border border-[#cfcabb] rounded-xl px-3 py-2.5 outline-none focus:border-amber-800 cursor-pointer text-[#2d2c25]"
                     value={settings.writingMode}
                     onChange={(e) => setSettings({ ...settings, writingMode: e.target.value as any })}
                   >
@@ -1204,12 +636,11 @@ export default function App() {
                   </select>
                 </div>
 
-                {/* Tone Select */}
                 <div>
-                  <label className="block text-[10.5px] font-bold text-[#555042] mb-1">Giọng Văn Chủ Định</label>
+                  <label className="block text-[11px] font-bold text-[#555042] mb-1.5">Giọng Văn Chủ Định</label>
                   <select 
                     id="custom-tone-select"
-                    className="w-full text-xs bg-white border border-[#cfcabb] rounded-lg px-2.5 py-1.8 outline-none focus:border-amber-700"
+                    className="w-full text-xs bg-white border border-[#cfcabb] rounded-xl px-3 py-2.5 outline-none focus:border-amber-800 cursor-pointer text-[#2d2c25]"
                     value={settings.customTone}
                     onChange={(e) => setSettings({ ...settings, customTone: e.target.value })}
                   >
@@ -1221,38 +652,35 @@ export default function App() {
                   </select>
                 </div>
 
-              </div>
+                <div className="space-y-2 border-t border-[#f2edd9]/40 pt-3">
+                  <label className="flex items-center gap-2.5 text-xs text-[#2d2c25] font-medium cursor-pointer py-1 select-none">
+                    <input 
+                      id="sensory-emphasis-checkbox"
+                      type="checkbox"
+                      checked={settings.sensoryEmphasis}
+                      onChange={(e) => setSettings({ ...settings, sensoryEmphasis: e.target.checked })}
+                      className="w-4.5 h-4.5 rounded text-amber-600 cursor-pointer accent-[#d97706]"
+                    />
+                    <span className="font-sans text-[12px] font-medium text-[#2d2c25]">Mô tả kỹ lưỡng ngũ giác quan</span>
+                  </label>
 
-              {/* Checkbox controls for 5 senses and psychological changes */}
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-1">
-                
-                <label className="flex items-center gap-2 text-xs text-[#413e34] font-medium cursor-pointer">
-                  <input 
-                    id="sensory-emphasis-checkbox"
-                    type="checkbox"
-                    checked={settings.sensoryEmphasis}
-                    onChange={(e) => setSettings({ ...settings, sensoryEmphasis: e.target.checked })}
-                    className="w-4 h-4 accent-amber-800"
-                  />
-                  <span>Mô tả kỹ lưỡng ngũ giác quan</span>
-                </label>
+                  <label className="flex items-center gap-2.5 text-xs text-[#2d2c25] font-medium cursor-pointer py-1 select-none">
+                    <input 
+                      id="psychological-focus-checkbox"
+                      type="checkbox"
+                      checked={settings.psychologicalFocus}
+                      onChange={(e) => setSettings({ ...settings, psychologicalFocus: e.target.checked })}
+                      className="w-4.5 h-4.5 rounded text-amber-600 cursor-pointer accent-[#d97706]"
+                    />
+                    <span className="font-sans text-[12px] font-medium text-[#2d2c25]">Khắc họa biến thiên tâm lý thâm tâm</span>
+                  </label>
+                </div>
 
-                <label className="flex items-center gap-2 text-xs text-[#413e34] font-medium cursor-pointer">
-                  <input 
-                    id="psychological-focus-checkbox"
-                    type="checkbox"
-                    checked={settings.psychologicalFocus}
-                    onChange={(e) => setSettings({ ...settings, psychologicalFocus: e.target.checked })}
-                    className="w-4 h-4 accent-amber-800"
-                  />
-                  <span>Khắc họa biến thiên tâm lý thâm tâm</span>
-                </label>
-
-                <div className="flex items-center gap-2 text-xs text-[#413e34]">
-                  <span className="font-medium">Độ dài mục tiêu:</span>
+                <div className="flex items-center justify-between text-xs text-[#413e34] border-t border-[#f2edd9]/40 pt-3">
+                  <span className="font-bold">Độ dài mục tiêu:</span>
                   <select 
                     id="word-count-select"
-                    className="bg-white border border-[#cfcabb] rounded px-1.5 py-0.5 text-[11px]"
+                    className="bg-white border border-[#cfcabb] rounded-lg px-2.5 py-1 text-xs outline-none cursor-pointer"
                     value={settings.wordCountTarget}
                     onChange={(e) => setSettings({ ...settings, wordCountTarget: Number(e.target.value) })}
                   >
@@ -1261,252 +689,688 @@ export default function App() {
                     <option value="1800">~1800 chữ (Phân cảnh sâu sắc)</option>
                   </select>
                 </div>
-
               </div>
-
             </div>
 
-            {/* MAIN PARCHMENT CANVAS EXCLUSIVE CONTAINER */}
-            <div className="p-4 bg-[#FAF9F5] space-y-4">
-              
-              {/* Ý Tưởng Khởi Điểm & Edit title */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
-                <div>
-                  <label className="block text-[10.5px] font-bold text-[#555042] mb-1 uppercase tracking-wider">Tiêu Đề / Tên Hồi Chương</label>
-                  <input 
-                    id="chap-title-input"
-                    type="text" 
-                    className="w-full text-sm font-serif font-semibold bg-white border border-[#dbd8cf] rounded-xl px-3 py-2 outline-none focus:border-amber-600 transition-colors"
-                    placeholder="VD: Hồi 1: Đêm Tuyết Hang Đá"
-                    value={activeChapter?.title || ''}
-                    onChange={(e) => handleUpdateChapterField('title', e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10.5px] font-bold text-[#555042] mb-1 uppercase tracking-wider">Ý Tưởng Phác Thảo Của Bạn (Chi tiết cho chương này)</label>
-                  <textarea 
-                    id="chap-prompt-textarea"
-                    className="w-full h-[38px] text-xs bg-white border border-[#dbd8cf] rounded-xl px-3 py-1 outline-none focus:border-amber-600 transition-colors leading-normal resize-none custom-scrollbar"
-                    placeholder="Mô tả sự kiện then chốt của chương..."
-                    value={activeChapter?.userPrompt || ''}
-                    onChange={(e) => handleUpdateChapterField('userPrompt', e.target.value)}
-                  />
-                </div>
-
+            {/* Card 3: Chi Tiết Tiêu Đề Chương */}
+            <div className="bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs space-y-4">
+              <div>
+                <label className="block text-[10px] font-sans font-bold text-gray-500 mb-1.5 uppercase tracking-wider">TIÊU ĐỀ / TÊN HỒI CHƯƠNG</label>
+                <input 
+                  id="chap-title-input"
+                  type="text" 
+                  className="w-full text-base font-serif font-black bg-white border border-[#dbd8cf] rounded-2xl px-4 py-3 outline-none focus:border-[#881337] text-[#2d2c25]"
+                  placeholder="VD: Hồi 1: Đêm Tuyết Trong Hang Băng lấp lánh"
+                  value={activeChapter?.title || ''}
+                  onChange={(e) => handleUpdateChapterField('title', e.target.value)}
+                />
               </div>
 
-              {/* INTERACTIVE WORKSPACE INSTRUMENTS */}
-              <div className="bg-[#f0ede4] border border-[#cfcabb] p-3 rounded-xl space-y-3">
-                
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  
-                  <div className="flex items-center gap-2">
-                    <Feather className="w-4 h-4 text-amber-800" />
-                    <span className="text-xs font-extrabold text-[#3a372e] uppercase">BẢNG KÍCH HOẠT SÁNG TÁC</span>
-                  </div>
+              <div>
+                <label className="block text-[10px] font-sans font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Ý TƯỞNG PHÁC THẢO CỦA BẠN (CHI TIẾT CHO CHƯƠNG NÀY)</label>
+                <textarea 
+                  id="chap-prompt-textarea"
+                  className="w-full h-24 text-xs font-sans bg-white border border-[#dbd8cf] rounded-2xl p-3 outline-none focus:border-[#881337] leading-relaxed resize-none text-[#2d2c25] custom-scrollbar"
+                  placeholder="Mô tả các sự kiện bấu chốt mà bạn muốn vẽ bối cảnh..."
+                  value={activeChapter?.userPrompt || ''}
+                  onChange={(e) => handleUpdateChapterField('userPrompt', e.target.value)}
+                />
+              </div>
+            </div>
 
-                  {/* Mode Selector for Action */}
-                  <div className="flex rounded-lg bg-white p-0.5 border border-[#cfcabb] text-xs">
-                    <button 
-                      id="action-write-new"
-                      onClick={() => setActionType('writeNew')}
-                      className={`px-2.5 py-1 rounded-md transition-all text-[11px] font-bold cursor-pointer ${
-                        actionType === 'writeNew' 
-                        ? 'bg-[#881337] text-white' 
-                        : 'text-gray-600 hover:text-black'
-                      }`}
-                    >
-                      Viết từ đầu
-                    </button>
-                    <button 
-                      id="action-continue"
-                      onClick={() => setActionType('continue')}
-                      className={`px-2.5 py-1 rounded-md transition-all text-[11px] font-bold cursor-pointer ${
-                        actionType === 'continue' 
-                        ? 'bg-[#881337] text-white' 
-                        : 'text-gray-600 hover:text-black'
-                      }`}
-                    >
-                      Viết tiếp {activeChapter?.content ? '⬇' : ''}
-                    </button>
-                    <button 
-                      id="action-elaborate"
-                      onClick={() => setActionType('elaborate')}
-                      className={`px-2.5 py-1 rounded-md transition-all text-[11px] font-bold cursor-pointer ${
-                        actionType === 'elaborate' 
-                        ? 'bg-[#881337] text-white' 
-                        : 'text-gray-600 hover:text-black'
-                      }`}
-                    >
-                      Viết chi tiết hóa mảnh nháp
-                    </button>
-                  </div>
-
-                  {/* AI Suggested Paths Rendering */}
-                  {activeChapter?.suggestedPaths && activeChapter.suggestedPaths.length > 0 && (
-                    <div className="bg-[#fdfcf9] border border-[#d8d5ca] p-3 rounded-lg shadow-inner mt-2">
-                      <h4 className="text-[10px] font-bold text-[#555042] mb-1.5 uppercase flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Gợi ý cốt truyện tiếp theo
-                      </h4>
-                      <div className="flex flex-col gap-1.5">
-                        {activeChapter.suggestedPaths.map((path, idx) => (
-                          <button 
-                            key={idx} 
-                            className="w-full text-left text-xs bg-white text-gray-700 hover:bg-amber-50 hover:text-amber-950 p-2 rounded shadow-xs border border-[#e4e2d8] transition-all"
-                            onClick={() => setUserInstruction(path)}
-                          >
-                            {path}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
+            {/* Card 4: Bảng Kích Hoạt Sáng Tác */}
+            <div className="bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="p-1 px-3 bg-gradient-to-r from-[#881337] to-[#161512] text-[#decb96] rounded-xl flex items-center gap-1.5">
+                  <Feather className="w-3.5 h-3.5" />
+                  <span className="text-[10.5px] font-sans font-extrabold uppercase tracking-wide">BẢNG KÍCH HOẠT SÁNG TÁC</span>
                 </div>
+              </div>
 
-                {/* Additional Instruction TextArea */}
-                <div>
-                  <textarea 
-                    id="user-instruction-input"
-                    className="w-full h-18 text-xs bg-white border border-[#dbd8cf] rounded-lg p-2.5 outline-none focus:border-amber-600 leading-relaxed resize-none custom-scrollbar"
-                    placeholder={
-                      actionType === 'continue' 
-                      ? 'Ý đồ hay tình tiết lôi cuốn bạn muốn thúc AI viết tiếp theo ở đây... (ví dụ: "Sư tôn đột ngột siết chặt hông, nén đau liếc mắt thắm lãng mạn...")'
-                      : actionType === 'elaborate'
-                      ? 'Bổ sung hướng dẫn chi tiết cụ thể để mở rộng mượt mà... (ví dụ: "Khắc sâu hơn xúc giác đập dập, hơi thở mập mờ trong hang động...")'
-                      : 'Ý đồ bối cảnh cụ thể mà bạn muốn AI gia cố thêm trong chương này...'
-                    }
-                    value={userInstruction}
-                    onChange={(e) => setUserInstruction(e.target.value)}
-                  />
-                </div>
-
-                {/* Main Sparkles Trigger Button */}
+              <div className="grid grid-cols-3 gap-1 p-1 bg-[#efebd9]/40 rounded-xl border border-[#cfcabb]/50 text-xs text-center font-bold font-sans">
                 <button 
-                  id="trigger-ai-btn"
-                  onClick={handleCallAIGeneration}
-                  disabled={isGenerating}
-                  className="w-full bg-gradient-to-r from-amber-800 to-red-950 hover:from-amber-900 hover:to-stone-900 text-amber-100 font-serif font-semibold text-sm py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 border border-amber-600/30 disabled:opacity-45 cursor-pointer disabled:cursor-not-allowed"
+                  id="action-write-new"
+                  onClick={() => setActionType('writeNew')}
+                  className={`py-2 rounded-lg transition-all text-[11px] font-extrabold flex items-center justify-center cursor-pointer ${
+                    actionType === 'writeNew' 
+                    ? 'bg-[#881337] text-white shadow' 
+                    : 'text-[#5e5a52] bg-white border border-transparent hover:text-black'
+                  }`}
                 >
-                  {isGenerating ? (
-                    <RefreshCw className="w-5 h-5 animate-spin text-amber-300" />
-                  ) : (
-                    <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
-                  )}
-                  <span>
-                    {isGenerating ? `ĐANG THỂ HIỆN bút pháp: ${settings.writingMode === 'orinlo_m3' ? 'Orinlo 18+' : 'Chi tiết văn học'}...` : '✨ ĐỒNG SÁNG TÁC - TOẢ LINH NỘI DUNG CHƯƠNG CHI TIẾT'}
-                  </span>
+                  viết từ đầu
                 </button>
-
-                {/* Loading status details rendering */}
-                {isGenerating && aiStepFeedback && (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-[11px] font-mono text-amber-900 text-center flex items-center justify-center gap-2 pt-1 font-semibold"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
-                    <span>{aiStepFeedback}</span>
-                  </motion.div>
-                )}
-
+                <button 
+                  id="action-continue"
+                  onClick={() => setActionType('continue')}
+                  className={`py-2 rounded-lg transition-all text-[11px] font-extrabold flex items-center justify-center cursor-pointer ${
+                    actionType === 'continue' 
+                    ? 'bg-[#881337] text-white shadow' 
+                    : 'text-[#5e5a52] bg-white border border-transparent hover:text-black'
+                  }`}
+                >
+                  viết tiếp ⬇
+                </button>
+                <button 
+                  id="action-elaborate"
+                  onClick={() => setActionType('elaborate')}
+                  className={`py-2 rounded-lg transition-all text-[11px] font-extrabold flex items-center justify-center cursor-pointer ${
+                    actionType === 'elaborate' 
+                    ? 'bg-[#881337] text-white shadow' 
+                    : 'text-[#5e5a52] bg-white border border-transparent hover:text-black'
+                  }`}
+                >
+                  viết chi tiết
+                </button>
               </div>
 
-              {/* DÂN CHƯƠNG GIẤY IVORY - TEXT EDITOR PANEL */}
-              <div className="relative">
-                
-                <div id="parchment-sheet-box" className="w-full bg-[#fcfbf9] border border-[#d9ccb4] shadow-md rounded-2xl p-4 md:p-6 flex flex-col relative overflow-hidden bg-[radial-gradient(#faf7ee_1px,transparent_1px)] [background-size:16px_16px]">
-                  
-                  {/* Decorative parchment line elements */}
-                  <div className="absolute top-0 bottom-0 left-4 w-px bg-red-800/10 hidden md:block"></div>
-                  <div className="absolute top-0 bottom-0 left-4.5 w-px bg-red-800/5 hidden md:block"></div>
-
-                  <div className="flex justify-between items-center border-b border-[#eadaa6] pb-3 mb-4 font-serif text-xs text-[#6e685f]">
-                    <span className="flex items-center gap-1">
-                      <Feather className="w-3.5 h-3.5" />
-                      <span>{activeChapter?.title || 'Chương Chưa Đặt Tên'}</span>
-                    </span>
-                    <span className="font-mono text-[11px]">
-                      {activeChapter?.content ? `${activeChapter.wordCount} chữ` : 'TRANG GIẤY TRỐNG'}
-                    </span>
+              {activeChapter?.suggestedPaths && activeChapter.suggestedPaths.length > 0 && (
+                <div className="bg-[#fcfbf9] border border-[#eadaa6]/60 p-3.5 rounded-2xl shadow-inner space-y-1.5">
+                  <h4 className="text-[10px] font-bold text-[#555042] uppercase flex items-center gap-1.5 tracking-wider">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600 animate-pulse" /> Gợi ý cốt truyện tiếp theo:
+                  </h4>
+                  <div className="flex flex-col gap-1.5">
+                    {activeChapter.suggestedPaths.map((path, idx) => (
+                      <button 
+                        key={idx} 
+                        className="w-full text-left text-xs bg-white text-[#2d2c25] hover:bg-amber-50 hover:text-amber-950 p-2 rounded-xl border border-[#dbd8cf] transition-all leading-normal"
+                        onClick={() => setUserInstruction(path)}
+                      >
+                        {path}
+                      </button>
+                    ))}
                   </div>
+                </div>
+              )}
 
-                  {/* Manual Editable textarea of chapter content - USING APP-PANEL AESTHETIC */}
-                  <textarea 
-                    id="parchment-text-area"
-                    className="app-panel w-full text-sm md:text-base font-serif bg-transparent leading-loose text-[#2b271e] focus:outline-none resize-none min-h-[460px] max-h-[800px] z-10 pl-0 md:pl-6 text-justify custom-scrollbar p-6"
-                    placeholder="Ấn nút 'Để AI Đồng Sáng Tác' để khởi tạo áng văn lãng mạn lôi cuốn thăng hoa ngũ giác quan, hoặc tự tay viết suy tư thầm kín của bạn tại đây linh khí..."
-                    value={activeChapter?.content || ''}
-                    rows={16}
-                    onChange={(e) => handleUpdateChapterField('content', e.target.value)}
-                  />
+              <div>
+                <textarea 
+                  id="user-instruction-input"
+                  className="w-full h-20 text-xs font-sans bg-white border border-[#dbd8cf] rounded-2xl p-3 outline-none focus:border-[#881337] leading-relaxed resize-none text-[#2d2c25] custom-scrollbar"
+                  placeholder={
+                    actionType === 'continue' 
+                    ? 'Ý đồ hay tình tiết lôi cuốn bạn muốn thúc AI viết tiếp theo ở đây... (ví dụ: "Sư tôn đột ngột siết chặt hông, nén đau liếc mắt thắm lãng mạn...")'
+                    : actionType === 'elaborate'
+                    ? 'Bổ sung hướng dẫn chi tiết cụ thể để mở rộng mượt mà... (ví dụ: "Khắc sâu hơn xúc giác đập dập, hơi thở mập mờ trong hang động...")'
+                    : 'Ý đồ bối cảnh cụ thể mà bạn muốn AI gia cố thêm trong chương này...'
+                  }
+                  value={userInstruction}
+                  onChange={(e) => setUserInstruction(e.target.value)}
+                />
+              </div>
 
-                  {/* Ribbon indicating active style status */}
-                  <div className="mt-4 pt-3.5 border-t border-[#eadaa6] flex flex-wrap items-center justify-between text-[11px] font-mono text-[#787162] z-10">
-                    <div>
-                      <span className="font-sans font-bold uppercase text-[9px] bg-amber-950/20 text-amber-950 px-2 py-0.5 rounded mr-1.5">
-                        {settings.writingMode === 'orinlo_m3' && 'MỨC 3: TRỰC TIẾP'}
-                        {settings.writingMode === 'orinlo_m2' && 'MỨC 2: ẨN DỤ SÂU'}
-                        {settings.writingMode === 'orinlo_m1' && 'MỨC 1: FADE-TO-BLACK'}
-                        {settings.writingMode === 'standard' && 'THƯỜNG: STANDARD'}
-                      </span>
-                      <span>Tone: <span className="font-serif italic font-bold">{settings.customTone}</span></span>
-                    </div>
-                    {isGenerating ? (
-                      <span className="text-red-800 animate-pulse flex items-center gap-1 font-bold">
-                        <Flame className="w-3.5 h-3.5 animate-bounce" /> Sáng tác dạt dào...
-                      </span>
-                    ) : (
-                      <span className="text-emerald-800 flex items-center gap-1">
-                        <Check className="w-3.5 h-3.5" /> Thể chương sẵn sàng
-                      </span>
-                    )}
+              <button 
+                id="trigger-ai-btn"
+                onClick={handleCallAIGeneration}
+                disabled={isGenerating}
+                className="w-full bg-[#fdfcf9] hover:bg-[#FAF9F5] text-[#b45309] font-serif font-black text-sm py-4 px-4 rounded-2xl shadow-sm border border-[#d97706]/40 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed select-none group"
+              >
+                {isGenerating ? (
+                  <RefreshCw className="w-5 h-5 animate-spin text-[#d97706]" />
+                ) : (
+                  <Sparkles className="w-5 h-5 text-[#d97706] animate-pulse group-hover:scale-110 transition-transform" />
+                )}
+                <span>
+                  {isGenerating ? 'ĐỒNG SÁNG TÁC ĐANG VIẾT...' : '✨ ĐỒNG SÁNG TÁC - TOẢ LINH NỘI DUNG CHƯƠNG CHI TIẾT'}
+                </span>
+              </button>
+
+              {isGenerating && aiStepFeedback && (
+                <div className="text-[11px] font-mono text-amber-900 text-center flex items-center justify-center gap-2 pt-1 font-semibold animate-pulse">
+                  <span className="w-2 h-2 rounded-full bg-red-700 animate-ping"></span>
+                  <span>{aiStepFeedback}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Card 5: Tờ Giấy Bản Thảo Parchment */}
+            <div id="parchment-sheet-box" className="w-full bg-[#fcfbf9] border border-[#d9ccb4] shadow-md rounded-3xl p-5 md:p-8 flex flex-col relative overflow-hidden bg-[radial-gradient(#faf7ee_1px,transparent_1px)] [background-size:16px_16px] space-y-4">
+              <div className="absolute top-0 bottom-0 left-5 w-px bg-red-800/10 hidden md:block"></div>
+              <div className="absolute top-0 bottom-0 left-5.5 w-px bg-red-800/5 hidden md:block"></div>
+
+              <div className="flex justify-between items-center border-b border-[#eadaa6] pb-3 font-serif text-xs text-[#6e685f]">
+                <span className="flex items-center gap-1.5 font-bold">
+                  <Feather className="w-4 h-4 text-amber-700" />
+                  <span>{activeChapter?.title || 'Chương Chưa Đặt Tên'}</span>
+                </span>
+                <span className="font-mono text-[11px] px-2.5 py-0.5 bg-[#efebd9]/40 rounded-full font-bold">
+                  {activeChapter?.content ? `${activeChapter.wordCount} chữ` : 'TRANG GIẤY TRỐNG'}
+                </span>
+              </div>
+
+              <textarea 
+                id="parchment-text-area"
+                className="w-full text-base font-serif bg-transparent leading-loose text-[#2b271e] focus:outline-none resize-none min-h-[460px] max-h-[800px] z-10 pl-0 md:pl-7 text-justify custom-scrollbar font-normal"
+                placeholder="Khởi tạo chương hoặc bắt tay sáng tác bối cảnh tại đây linh khí..."
+                value={activeChapter?.content || ''}
+                rows={18}
+                onChange={(e) => handleUpdateChapterField('content', e.target.value)}
+              />
+
+              <div className="pt-3.5 border-t border-[#eadaa6] flex flex-wrap items-center justify-between text-[11px] font-mono text-[#787162] z-10">
+                <div className="flex items-center gap-1">
+                  <span className="font-sans font-bold uppercase text-[9px] bg-amber-950/20 text-amber-950 px-2 py-0.5 rounded mr-1.5">
+                    {settings.writingMode === 'orinlo_m3' && 'MỨC 3: TRỰC TIẾP'}
+                    {settings.writingMode === 'orinlo_m2' && 'MỨC 2: ẨN DỤ SÂU'}
+                    {settings.writingMode === 'orinlo_m1' && 'MỨC 1: FADE-TO-BLACK'}
+                    {settings.writingMode === 'standard' && 'THƯỜNG: STANDARD'}
+                  </span>
+                  <span>giọng văn: <span className="font-serif italic font-bold text-amber-900">{settings.customTone}</span></span>
+                </div>
+                {isGenerating ? (
+                  <span className="text-red-800 animate-pulse flex items-center gap-1 font-bold">
+                    <Flame className="w-3.5 h-3.5 animate-bounce" /> Sáng tác dạt dào...
+                  </span>
+                ) : (
+                  <span className="text-emerald-800 flex items-center gap-1 font-bold">
+                    <Check className="w-3.5 h-3.5" /> Thể chương sẵn sàng
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Explainer rules */}
+            <div id="orinlo-rules-card" className="bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs">
+              <h4 className="font-serif font-bold text-sm text-[#4a3a24] flex items-center gap-2 mb-2">
+                <ShieldAlert className="w-4 h-4 text-red-800 shrink-0" />
+                <span>Quy Tắc Bút Pháp Thăng Hoa Orinlo Core</span>
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] leading-relaxed text-[#514d42]">
+                <div className="space-y-1">
+                  <p><span className="font-bold text-amber-900">• Đỉnh Cao Ngũ Giác:</span> Sáng tác lôi cuốn cần dốc tâm vẽ trọn vị giác nồng mật, thị giác bập bùng, thính giác náo nức.</p>
+                </div>
+                <div className="space-y-1">
+                  <p><span className="font-bold text-amber-900">• Tránh Sáo Rỗng:</span> Nên khắc sâu hơi thở, nhịp thở, giọt mồ hôi li ti hay chấn động tâm can dồn dập thay cho các từ sáo hoa mỹ.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ----------------- TAB 2: HỒ SƠ ----------------- */}
+        {activeTab === 'profile' && (
+          <div className="space-y-4 animate-fade-in pb-10">
+            
+            {/* Card 1: Hồ Sơ Cốt Truyện Header */}
+            <div className="bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1 px-2.5 bg-gradient-to-r from-amber-700 to-[#161512] text-[#decb96] rounded-xl flex items-center gap-1.5">
+                    <Compass className="w-4 h-4 text-amber-300" />
+                    <h2 className="font-serif font-bold text-sm text-[#decb96]">Hồ Sơ Cốt Truyện Bảo Bản</h2>
                   </div>
-
                 </div>
 
+                <div className="flex items-center gap-1.5">
+                  <button 
+                    onClick={() => setIsHeaderVisible(!isHeaderVisible)}
+                    className="px-2.5 py-1 text-[10.5px] font-sans font-bold bg-[#efebe1] text-[#5e5a52] rounded-lg border border-[#cfcabb] hover:text-[#2d2c25] hover:bg-white transition-all cursor-pointer select-none"
+                  >
+                    {isHeaderVisible ? 'Ẩn Header' : 'Hiện Header'}
+                  </button>
+                  <span className="text-[10px] font-sans font-extrabold bg-[#881337] text-white px-2 py-1 rounded-lg">
+                    Sư Đồ - Tu Chân
+                  </span>
+                </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#f2edd9]/40">
+                <button 
+                  onClick={() => {
+                    const data = JSON.stringify({ profile, chapters, settings }, null, 2);
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `novel_profile_${new Date().toISOString().slice(0, 10)}.json`;
+                    a.click();
+                    showNotification('Đã tải xuống file hồ sơ hoàn chỉnh!');
+                  }}
+                  className="text-center py-2 text-xs font-sans font-black text-amber-900 border border-[#dbd8cf] hover:border-amber-700 bg-white rounded-xl cursor-pointer"
+                >
+                  Xuất Hồ sơ
+                </button>
+                <label className="text-center py-2 text-xs font-sans font-black text-amber-900 border border-[#dbd8cf] hover:border-amber-700 bg-white rounded-xl cursor-pointer block">
+                  Nhập Hồ sơ
+                  <input 
+                    type="file" 
+                    accept=".json" 
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        try {
+                          const data = JSON.parse(event.target?.result as string);
+                          if (data.profile && data.chapters && data.settings) {
+                            setProfile(data.profile);
+                            setChapters(data.chapters);
+                            setSettings(data.settings);
+                            setSelectedChapterId(data.chapters[0]?.id || '');
+                            showNotification('Thần thức đã khôi phục bản bối cảnh của bạn!');
+                          } else {
+                            showNotification('Định dạng hồ sơ .json không đúng mẫu!', true);
+                          }
+                        } catch {
+                          showNotification('Thất bại khi đọc file hồ sơ!', true);
+                        }
+                      };
+                      reader.readAsText(file);
+                    }}
+                  />
+                </label>
+              </div>
             </div>
 
-          </div>
-
-          {/* EXTRA: ORINLO RULES EXPLAINER CARD */}
-          <div id="orinlo-rules-card" className="bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-xl shadow-xs">
-            <h4 className="font-serif font-bold text-sm text-[#4a3a24] flex items-center gap-2 mb-2">
-              <ShieldAlert className="w-4 h-4 text-red-800" />
-              <span>Gợi ý Nguyên tắc Bút pháp Thăng hoa Orinlo Core</span>
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs leading-relaxed text-[#514d42]">
-              <div className="space-y-1">
-                <p><span className="font-bold text-amber-900">• Đỉnh Cao Ngũ Giác Quan:</span> Sáng tác thăng hoa cần trọn vẹn thị giác bập bùng, thính giác nồng say, xúc giác ngàn hơi điện dội và dồi dào vị giác môi kề môi mặn đắng nồng mật.</p>
-                <p><span className="font-bold text-amber-900">• Phát triển Mâu Thuẫn:</span> Mỗi phân cảnh lãng mạn hay tẩu hỏa nhập ma là dòng chảy động lực của khao khát chiếm lĩnh và thử thách đạo lý cấm kỵ tinh vi.</p>
-              </div>
-              <div className="space-y-1">
-                <p><span className="font-bold text-amber-900">• Tránh Sáo Rỗng:</span> Tránh các mô tả hoa mỹ nhạt nhòa, tập trung khắc sâu chuyển biến nhịp thở, nét mồ hôi li ti rơi trên ngực hay sự rùng mình run rẩy mê say thầm kín.</p>
-                <p><span className="font-bold text-amber-900">• Duy Trì Hồ Sơ:</span> Hồ sơ cốt truyện ngăn AI sa đà vào các lối thoại hiện đại nhạt nhòa, giữ chất văn bay bổng hoặc quyến rũ đậm bối cảnh Việt Nam.</p>
-              </div>
+            {/* Card 2: 3-column sub tabs */}
+            <div className="grid grid-cols-3 border border-[#dbd8cf] bg-[#FAF9F5] rounded-2xl overflow-hidden font-sans text-xs font-bold text-[#5e5a52]">
+              <button 
+                onClick={() => setProfileStep(1)}
+                className={`flex flex-col items-center gap-1.5 py-3.5 border-b-2.5 transition-all outline-none cursor-pointer ${
+                  profileStep === 1 
+                  ? 'border-[#881337] text-[#881337] bg-[#f5f3eb]' 
+                  : 'border-transparent hover:text-black hover:bg-white'
+                }`}
+              >
+                <Layers className="w-4 h-4" />
+                <span>1. Tổng Quan</span>
+              </button>
+              <button 
+                onClick={() => setProfileStep(2)}
+                className={`flex flex-col items-center gap-1.5 py-3.5 border-b-2.5 transition-all outline-none cursor-pointer ${
+                  profileStep === 2 
+                  ? 'border-[#881337] text-[#881337] bg-[#f5f3eb]' 
+                  : 'border-transparent hover:text-black hover:bg-white'
+                }`}
+              >
+                <Coins className="w-4 h-4" />
+                <span>2. Thiết Chế</span>
+              </button>
+              <button 
+                onClick={() => setProfileStep(3)}
+                className={`flex flex-col items-center gap-1.5 py-3.5 border-b-2.5 transition-all outline-none cursor-pointer ${
+                  profileStep === 3 
+                  ? 'border-[#881337] text-[#881337] bg-[#f5f3eb]' 
+                  : 'border-transparent hover:text-black hover:bg-white'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span>3. Nhân Vật</span>
+              </button>
             </div>
+
+            {/* SUB-TAB 1: TỔNG QUAN */}
+            {profileStep === 1 && (
+              <div id="setup-step1-pane" className="space-y-4 animate-fade-in bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs">
+                <div className="bg-[#fffbeb] border border-[#fef3c7] p-3 rounded-xl text-xs text-[#ae3813] leading-relaxed">
+                  <span className="font-bold">Bước 1: Tổng Quan Ý Tưởng</span> — Điền thông tin chính để định hình lối bút thuật tốt nhất cho AI.
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-sans font-bold text-[#8e8a7f] mb-1.5 uppercase tracking-wider">TÊN TRUYỆN TIỂU THUYẾT</label>
+                  <input 
+                    id="novel-title-input"
+                    type="text"
+                    className="w-full text-sm font-serif font-black bg-white border border-[#dbd8cf] rounded-xl px-3.5 py-2.5 outline-none focus:border-[#881337] text-[#2d2c25]"
+                    placeholder="Nhập tên tiểu thuyết..."
+                    value={profile.title}
+                    onChange={(e) => setProfile({ ...profile, title: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-sans font-bold text-[#8e8a7f] mb-1.5 uppercase tracking-wider">Ý TƯỞNG CHỦ ĐẠO / CỐT LÕI</label>
+                  <textarea 
+                    id="novel-idea-textarea"
+                    className="w-full h-24 text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl p-3 outline-none focus:border-[#881337] leading-relaxed resize-none text-[#2d2c25] custom-scrollbar"
+                    placeholder="Tính đối lập mâu thuẫn chính..."
+                    value={profile.idea}
+                    onChange={(e) => setProfile({ ...profile, idea: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-sans font-bold text-[#8e8a7f] mb-1.5 uppercase tracking-wider">Ý TƯỞNG BỐI CẢNH THẾ GIỚI</label>
+                  <textarea 
+                    id="novel-world-textarea"
+                    className="w-full h-24 text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl p-3 outline-none focus:border-[#881337] leading-relaxed resize-none text-[#2d2c25] custom-scrollbar"
+                    placeholder="Tông môn thế gia..."
+                    value={profile.worldBackground}
+                    onChange={(e) => setProfile({ ...profile, worldBackground: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-sans font-bold text-[#8e8a7f] mb-1.5 uppercase tracking-wider">Ý TƯỞNG KHỞI ĐẦU (HOOK)</label>
+                  <textarea 
+                    id="novel-hook-textarea"
+                    className="w-full h-20 text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl p-3 outline-none focus:border-[#881337] leading-relaxed resize-none text-[#2d2c25] custom-scrollbar"
+                    placeholder="Sự cố hay biến cố ban đầu..."
+                    value={profile.startingHook}
+                    onChange={(e) => setProfile({ ...profile, startingHook: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* SUB-TAB 2: THIẾT CHẾ */}
+            {profileStep === 2 && (
+              <div id="setup-step2-pane" className="space-y-4 animate-fade-in bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs">
+                <div className="bg-[#fffbeb] border border-[#fef3c7] p-3 rounded-xl text-xs text-[#ae3813] leading-relaxed">
+                  <span className="font-bold">Bước 2: Hệ Thống Bối Cảnh Chi Tiết</span> — Đặt quy cách thế giới. Bấm <span className="font-bold">+</span> để lưu thông số.
+                </div>
+
+                {/* Tu luyện */}
+                <div className="border border-[#dbd8cf]/80 rounded-2xl p-3.5 bg-[#FCFBF8] space-y-2">
+                  <label className="block text-xs font-black text-[#2d2c25] uppercase tracking-wider">• HỆ THỐNG TU LUYỆN CỐT LÕI</label>
+                  <div className="flex gap-2">
+                    <input 
+                      id="new-cultivation-input"
+                      type="text" 
+                      className="flex-grow text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2 outline-none focus:border-amber-600 text-[#2d2c25]"
+                      placeholder="Thêm hệ pháp..."
+                      value={newCultivation}
+                      onChange={(e) => setNewCultivation(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddCultivation()}
+                    />
+                    <button 
+                      onClick={handleAddCultivation}
+                      className="bg-amber-800 text-amber-50 hover:bg-amber-950 px-4 rounded-xl text-xs font-bold cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {profile.cultivationSystem.map((item, i) => (
+                      <span key={i} className="text-xs bg-[#f4ebd9]/85 text-[#513c06] px-3 py-1 rounded-xl border border-amber-200/50 flex items-center gap-1.5 font-medium shadow-6xs">
+                        <span>{item}</span>
+                        <Trash2 className="w-3.5 h-3.5 text-amber-950 hover:text-red-600 cursor-pointer" onClick={() => handleRemoveProfileArrayItem('cultivationSystem', i)} />
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Cảnh giới */}
+                <div className="border border-[#dbd8cf]/80 rounded-2xl p-3.5 bg-[#FCFBF8] space-y-2">
+                  <label className="block text-xs font-black text-[#2d2c25] uppercase tracking-wider">• TÊN CÁC CẤP BẬC / CẢNH GIỚI</label>
+                  <div className="flex gap-2">
+                    <input 
+                      id="new-rank-input"
+                      type="text" 
+                      className="flex-grow text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2 outline-none focus:border-amber-600 text-[#2d2c25]"
+                      placeholder="VD: Trúc Cơ, Kim Đan..."
+                      value={newRank}
+                      onChange={(e) => setNewRank(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddRank()}
+                    />
+                    <button 
+                      onClick={handleAddRank}
+                      className="bg-amber-800 text-amber-50 hover:bg-amber-950 px-4 rounded-xl text-xs font-bold cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {profile.ranks.map((item, i) => (
+                      <span key={i} className="text-xs bg-blue-50/70 text-blue-950 px-3 py-1 rounded-xl border border-blue-200/50 flex items-center gap-1.5 font-mono shadow-6xs">
+                        <span>{item}</span>
+                        <Trash2 className="w-3.5 h-3.5 text-blue-900 hover:text-red-500 cursor-pointer" onClick={() => handleRemoveProfileArrayItem('ranks', i)} />
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tiền tệ */}
+                <div className="border border-[#dbd8cf]/80 rounded-2xl p-3.5 bg-[#FCFBF8] space-y-2">
+                  <label className="block text-xs font-black text-[#2d2c25] uppercase tracking-wider">• ĐƠN VỊ TIỀN TỆ</label>
+                  <div className="flex gap-2">
+                    <input 
+                      id="new-currency-input"
+                      type="text" 
+                      className="flex-grow text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2 outline-none focus:border-amber-600 text-[#2d2c25]"
+                      placeholder="Linh thạch, Thần nguyên bảo..."
+                      value={newCurrency}
+                      onChange={(e) => setNewCurrency(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddCurrency()}
+                    />
+                    <button 
+                      onClick={handleAddCurrency}
+                      className="bg-amber-800 text-amber-50 hover:bg-amber-950 px-4 rounded-xl text-xs font-bold cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {profile.currencies.map((item, i) => (
+                      <span key={i} className="text-xs bg-emerald-50/70 text-emerald-950 px-3 py-1 rounded-xl border border-emerald-200/50 flex items-center gap-1.5 shadow-6xs">
+                        <span>{item}</span>
+                        <Trash2 className="w-3.5 h-3.5 text-emerald-800 hover:text-red-500 cursor-pointer" onClick={() => handleRemoveProfileArrayItem('currencies', i)} />
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Pháp tắc vạn cổ */}
+                <div className="border border-[#dbd8cf]/80 rounded-2xl p-3.5 bg-[#FCFBF8] space-y-2">
+                  <label className="block text-xs font-black text-[#2d2c25] uppercase tracking-wider">• QUY TẮC PHÁP TẮC VŨ TRỤ</label>
+                  <div className="flex gap-2">
+                    <input 
+                      id="new-rule-input"
+                      type="text" 
+                      className="flex-grow text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2 outline-none focus:border-amber-600 text-[#2d2c25]"
+                      placeholder="Luật thiên địa..."
+                      value={newRule}
+                      onChange={(e) => setNewRule(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddRule()}
+                    />
+                    <button 
+                      onClick={handleAddRule}
+                      className="bg-amber-800 text-amber-50 hover:bg-amber-950 px-4 rounded-xl text-xs font-bold cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="space-y-2 pt-1">
+                    {profile.rules.map((item, i) => (
+                      <div key={i} className="flex items-start gap-2 bg-stone-50 border p-3 rounded-xl text-xs">
+                        <span className="w-5 h-5 text-[10px] bg-stone-200 text-stone-700 font-bold rounded-full flex items-center justify-center shrink-0">{i+1}</span>
+                        <span className="flex-grow leading-relaxed text-[#2d2c25] font-medium font-sans">{item}</span>
+                        <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-600 cursor-pointer self-center" onClick={() => handleRemoveProfileArrayItem('rules', i)} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-TAB 3: NHÂN VẬT */}
+            {profileStep === 3 && (
+              <div id="setup-step3-pane" className="space-y-4 animate-fade-in bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs">
+                <div className="bg-[#fffbeb] border border-[#fef3c7] p-3 rounded-xl text-xs text-[#ae3813] leading-relaxed">
+                  <span className="font-bold">Bước 3: Tạo File Thiết Kế Nhân Vật</span> — Định nghĩa diện mạo, bí cảnh, bối cảnh nhân thể để AI lồng ghép phù hợp từng phân đoạn truyện.
+                </div>
+
+                <div className="flex items-center justify-between border-b pb-2 text-sm font-bold text-[#413c33] font-serif">
+                  <span>Quản lý Nhân Vật ({profile.characters.length})</span>
+                  <button 
+                    onClick={() => {
+                      setEditCharacterId(null);
+                      setCharFormName('');
+                      setCharFormBio('');
+                      setCharFormPersonality('');
+                      setCharFormSkills('');
+                      setCharFormPower('');
+                      showNotification('Đã xóa trắng thông tin form!');
+                    }}
+                    className="text-[10.5px] uppercase font-sans font-extrabold text-[#ae3813] flex items-center gap-1 cursor-pointer select-none"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>xóa trắng form</span>
+                  </button>
+                </div>
+
+                {/* Form edit character */}
+                <div className="bg-[#FCFBF8] border border-amber-800/15 p-4 rounded-2xl space-y-3 shadow-6xs">
+                  <div className="text-xs font-sans font-black text-amber-950 flex items-center gap-1 border-b pb-2">
+                    <PenTool className="w-4 h-4 text-red-800" />
+                    <span>{editCharacterId ? 'ĐANG BIÊN TẬP NHÂN VẬT' : 'THÊM NHÂN VẬT MỚI'}</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-sans font-bold text-gray-500 uppercase">Tên nhân vật *</label>
+                      <input 
+                        id="char-name-input"
+                        type="text" 
+                        className="w-full text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2.5 mt-1 text-[#2d2c25]"
+                        placeholder="VD: Thẩm Thanh Ngôn"
+                        value={charFormName}
+                        onChange={(e) => setCharFormName(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-sans font-bold text-gray-500 uppercase">Giới tính</label>
+                      <select 
+                        className="w-full text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2.5 mt-1 cursor-pointer text-[#2d2c25]"
+                        value={charFormGender}
+                        onChange={(e) => setCharFormGender(e.target.value)}
+                      >
+                        <option value="Nam">Nam Nhân</option>
+                        <option value="Nữ">Nữ Nhân</option>
+                        <option value="Khác">Phi Nhân / Linh Thú</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-sans font-bold text-gray-500 uppercase">Tính cách &amp; Thần thái</label>
+                    <input 
+                      type="text" 
+                      className="w-full text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2.5 mt-1 text-[#2d2c25]"
+                      placeholder="Lạnh lùng võ đạo, thâm trầm, kiêu ngạo..."
+                      value={charFormPersonality}
+                      onChange={(e) => setCharFormPersonality(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-sans font-bold text-gray-500 uppercase">Pháp khí / Tiên thuật sở trường</label>
+                    <input 
+                      type="text" 
+                      className="w-full text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2.5 mt-1 text-[#2d2c25]"
+                      placeholder="Cửu Trọng Thiên Nhãn, Phượng Dực Kiếm..."
+                      value={charFormSkills}
+                      onChange={(e) => setCharFormSkills(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-sans font-bold text-gray-500 uppercase">Tu vi / Sức mạnh ban đầu</label>
+                    <input 
+                      type="text" 
+                      className="w-full text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2.5 mt-1 text-[#2d2c25]"
+                      placeholder="VD: Kiếm Tôn đại cực cảnh..."
+                      value={charFormPower}
+                      onChange={(e) => setCharFormPower(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-sans font-bold text-gray-500 uppercase">Tiểu Sử / Điển Tích</label>
+                    <textarea 
+                      className="w-full h-20 text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl p-3 mt-1 text-[#2d2c25] resize-none custom-scrollbar leading-relaxed"
+                      placeholder="Huyết hải chi thù, thầm chứa tiên đan..."
+                      value={charFormBio}
+                      onChange={(e) => setCharFormBio(e.target.value)}
+                    />
+                  </div>
+
+                  <button 
+                    onClick={handleSaveCharacter}
+                    className="w-full bg-[#881337] hover:bg-black text-white font-bold py-3.5 px-4 rounded-xl text-xs uppercase cursor-pointer flex items-center justify-center gap-1.5 shadow"
+                  >
+                    <Save className="w-4 h-4 text-[#decb96]" />
+                    <span>{editCharacterId ? 'Lưu Thiết Kế Nhân Vật' : 'Xác Tạo Nhân Vật'}</span>
+                  </button>
+                </div>
+
+                {/* List output character */}
+                <div className="space-y-3 pt-2">
+                  {profile.characters.map((c) => (
+                    <div key={c.id} className="p-4 rounded-2xl bg-white border border-[#dbd8cf] shadow-sm space-y-3 hover:border-amber-400 transition-colors">
+                      <div className="flex justify-between items-center bg-stone-50/50 p-1.5 rounded-xl">
+                        <div className="flex items-center gap-2">
+                          <span className="font-serif font-black text-[13.5px] text-[#2b271e]">{c.name}</span>
+                          <span className={`text-[9.5px] font-sans font-extrabold px-2 py-0.5 rounded-lg border uppercase tracking-wider ${
+                            c.gender === 'Nam' 
+                            ? 'bg-blue-50 border-blue-200 text-blue-700' 
+                            : 'bg-rose-55/15 border-rose-200 text-rose-700'
+                          }`}>
+                            {c.gender}
+                          </span>
+                        </div>
+                        <div className="flex gap-2.5 text-xs font-bold font-sans">
+                          <button onClick={() => handleStartEditCharacter(c)} className="text-amber-800 hover:underline cursor-pointer">Sửa</button>
+                          <button onClick={() => handleDeleteCharacter(c.id)} className="text-red-700 hover:text-red-500 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-2.5 bg-[#fcfbf9] border rounded-xl text-[11px] text-[#5e5a52]">
+                        <div><span className="font-bold text-[#881337]">• Tính cách:</span> {c.personality || 'Chưa lập'}</div>
+                        <div><span className="font-bold text-[#881337]">• Tiên pháp:</span> {c.skills || '---'}</div>
+                        <div className="col-span-2 border-t border-stone-200/50 pt-1.5"><span className="font-bold text-amber-950">• Tu vi xuất thế:</span> <span className="font-mono text-amber-900 font-extrabold">{c.startingPower || '---'}</span></div>
+                      </div>
+
+                      <p className="text-[11px] leading-relaxed text-[#5e5a52] italic pl-2.5 border-l-2 border-amber-800/35 font-sans">
+                        "{c.biography}"
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-
-        </section>
-
+        )}
       </main>
 
-      {/* FOOTER BAR OF EXCELLENCE */}
-      <footer id="app-footer" className="bg-[#11100e] border-t border-[#2e2a22] mt-8 py-5 text-center text-amber-200/50 text-xs font-serif italic">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-2.5">
-          <div>
-            "Văn võ phong sương hành giang hồ, tình duyên dẫu cấm kỵ vẫn rực cháy mười phương."
-          </div>
-          <div className="font-sans font-mono text-[10.5px] not-italic">
-            Thiết kế bởi Đồng Sáng Tác AI & Đại Sư ORINLO © 2026
+      {/* FIXED PINNED TAB FOOTER NAV & SIMULATED MOBILE SAFARI SHELL */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#161512] border-t border-[#2e2a22] flex flex-col pointer-events-auto shadow-2xl">
+        <div className="max-w-2xl mx-auto w-full grid grid-cols-2 text-center text-xs font-sans font-bold">
+          <button 
+            id="tab-button-write"
+            onClick={() => setActiveTab('write')}
+            className={`py-2 flex flex-col items-center justify-center gap-0.5 cursor-pointer transition-colors outline-none select-none ${
+              activeTab === 'write' 
+              ? 'text-amber-300' 
+              : 'text-[#dbd8cf]/55 hover:text-white'
+            }`}
+          >
+            <Feather className="w-4 h-4 shrink-0" />
+            <span className="text-[10.5px] uppercase tracking-wider font-extrabold">Viết Truyện</span>
+          </button>
+          <button 
+            id="tab-button-profile"
+            onClick={() => setActiveTab('profile')}
+            className={`py-2 flex flex-col items-center justify-center gap-0.5 cursor-pointer transition-colors outline-none select-none ${
+              activeTab === 'profile' 
+              ? 'text-amber-300' 
+              : 'text-[#dbd8cf]/55 hover:text-white'
+            }`}
+          >
+            <Compass className="w-4 h-4 shrink-0" />
+            <span className="text-[10.5px] uppercase tracking-wider font-extrabold">Hồ Sơ</span>
+          </button>
+        </div>
+
+        {/* Realistic Vercel / Safari Browser mockup address bar footer */}
+        <div className="w-full bg-[#11100e] py-1 flex items-center justify-center border-t border-[#2d2c25]">
+          <div className="flex items-center gap-1.5 bg-[#1a1915] border border-[#2d2c25] px-3 py-0.5 rounded-full text-[9.5px] font-mono text-amber-50/50 w-11/12 max-w-sm justify-center shadow-inner select-none pointer-events-none">
+            <span>🔒</span>
+            <span>novel-ai-18.vercel.app</span>
           </div>
         </div>
-      </footer>
-
+      </nav>
+      
     </div>
   );
 }
