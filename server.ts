@@ -163,7 +163,7 @@ app.post("/api/drive/save", async (req, res) => {
 
 // Helper: Formulate Orinlo/Standard instruction set
 function buildNovelSystemPrompt(profile: any, settings: any): string {
-  const { title, idea, worldBackground, startingHook, cultivationSystem, ranks, currencies, rules, characters } = profile;
+  const { title, idea, worldBackground, startingHook, cultivationSystem, ranks, currencies, rules, factions, characters } = profile;
   const { writingMode, customTone, sensoryEmphasis, psychologicalFocus, wordCountTarget } = settings;
 
   // 1. World profile formatting
@@ -184,6 +184,7 @@ function buildNovelSystemPrompt(profile: any, settings: any): string {
 - Hệ thống tu luyện: ${cultivationSystem?.join(", ") || "Chưa xác định"}
 - Cấp bậc tối cao/đại diện: ${ranks?.join(", ") || "Chưa xác định"}
 - Tiền tệ lưu thông: ${currencies?.join(", ") || "Chưa xác định"}
+- Thế lực / tông phái / quốc gia bối cảnh: ${factions?.join(", ") || "Chưa xác định"}
 - Luật lệ & Quy tắc thế giới: 
 ${rules?.map((r: string) => `  * ${r}`).join("\n") || "Chưa xác định"}
 `;
@@ -355,9 +356,13 @@ Hãy đồng sáng tác chương "${activeChapter.title || `Chương ${activeCha
 --- QUY TẮC PHẢN HỒI JSON BẮT BUỘC ---
 Kết quả trả về phải là một object JSON duy nhất chứa bốn trường:
 1. "content": Nội dung chương tiểu thuyết (string).
-2. "characterUpdates": Mảng các nhân vật mới xuất hiện hoặc được cập nhật, cấu trúc { name, gender, biography, personality, skills, startingPower }.
+2. "characterUpdates": Mảng các nhân vật mới xuất hiện hoặc được cập nhật, cấu trúc và yêu cầu như sau:
+   - Các trường: { name, gender, biography, personality, skills, startingPower }.
+   - Hãy quét kỹ phân đoạn văn vừa tạo ở "content".
+   - Nếu xuất hiện NHÂN VẬT MỚI: Thêm đầy đủ thông tin vào mảng này.
+   - Nếu NHÂN VẬT ĐÃ CÓ trong danh sách (như Thẩm Thanh Ngôn, Mộ Dung Nguyệt...) có sự biến thiên về sức mạnh/tu vi (ví dụ đột phá cảnh giới, bị suy giảm công lực), học thêm bí pháp/kỹ năng mới, thay đổi tâm lý hoặc trạng thái cơ thể: Hãy thêm nhân vật đó vào mảng này với "startingPower" và "skills" tương ứng đã được nâng cấp/thay đổi theo đúng tình tiết truyện vừa viết.
 3. "suggestedPaths": Mảng 3 gợi ý đường đi tiếp theo cho câu chuyện (array of strings).
-4. "storyProfileUpdates": Một object chứa các cập nhật trong hồ sơ truyện (Ví dụ: { "idea": "...", "worldBackground": "..." }). Nếu không có thay đổi gì, hãy để là null. Nếu cập nhật các danh sách như "rules", "cultivationSystem", "ranks", "currencies", hãy cung cấp danh sách đầy đủ mới sau khi cập nhật.
+4. "storyProfileUpdates": Một object chứa các cập nhật trong hồ sơ truyện (Ví dụ: { "idea": "...", "worldBackground": "...", "factions": ["Vũ Trụ Cổ Tông", "A"] }). Nếu không có thay đổi gì, hãy để là null. Nếu có bất kỳ sự thay đổi hoặc khai mở nào mới liên quan đến bối cảnh tổng quan (được thêm từ tình tiết câu chuyện vừa sáng tác), hãy tự động phác họa lại hoặc bổ sung hoàn chỉnh các trường sau (như "title", "idea", "worldBackground", "startingHook", "coreConflict", "styleNotes", hoặc các mảng danh sách bối cảnh "rules", "cultivationSystem", "ranks", "currencies", "factions", "themes"). Khi cập nhật danh sách mảng bối cảnh, hãy sáp nhập đầy đủ và cung cấp danh sách mới sau khi cập nhật.
 
 Hãy viết câu trả lời của bạn đúng định dạng JSON này.
 `,
@@ -386,6 +391,7 @@ Hãy viết câu trả lời của bạn đúng định dạng JSON này.
       content: data.content,
       characterUpdates: data.characterUpdates || [],
       suggestedPaths: data.suggestedPaths || [],
+      storyProfileUpdates: data.storyProfileUpdates || null,
     });
 
   } catch (error: any) {

@@ -28,6 +28,7 @@ export interface StoryProfile {
   ranks: string[]; // Names of ranks or levels
   currencies: string[]; // World currencies
   rules: string[]; // Key laws or rules of the universe
+  factions: string[]; // List of sects, clans, nations or power structures (Tông phái, gia tộc, đế quốc...)
 
   // Step 3: Cast
   characters: Character[];

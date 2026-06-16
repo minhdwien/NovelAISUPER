@@ -45,6 +45,12 @@ const DEFAULT_PROFILE: StoryProfile = {
     'Quan hệ sư đồ ở đỉnh Tuyết Phong là tôn nghiêm chí cao vô thượng, kẻ vi phạm sẽ bị trục xuất chịu phạt tại Vạn Kiếp Vực.',
     'Chiến đấu ngoài lầu thành thánh vực đại diện cho hành vi sinh tử tự quyết.'
   ],
+  factions: [
+    'Băng Sương Tiên Tông (Cốt tủy hàn băng, cư ngụ đỉnh Tuyết Sơn)',
+    'Huyết Nguyệt Ma Giáo (Thế lực ma giáo cư ngụ Vạn Kiếp Vực)',
+    'Thượng Cổ Phượng Tộc (Huyết mạch chân phượng ngự hỏa thần tộc)',
+    'Đại Chu Thần Triều (Đế quốc linh thổ trung tâm)'
+  ],
   characters: [
     {
       id: 'char-1',
@@ -110,7 +116,19 @@ const DEFAULT_SETTINGS: AISettings = {
 export default function App() {
   const [profile, setProfile] = useState<StoryProfile>(() => {
     const saved = localStorage.getItem('novel_app_profile');
-    return saved ? JSON.parse(saved) : DEFAULT_PROFILE;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          ...DEFAULT_PROFILE,
+          ...parsed,
+          factions: parsed.factions || DEFAULT_PROFILE.factions || []
+        };
+      } catch (e) {
+        return DEFAULT_PROFILE;
+      }
+    }
+    return DEFAULT_PROFILE;
   });
 
   const [chapters, setChapters] = useState<Chapter[]>(() => {
@@ -137,6 +155,7 @@ export default function App() {
   const [newRank, setNewRank] = useState('');
   const [newCurrency, setNewCurrency] = useState('');
   const [newRule, setNewRule] = useState('');
+  const [newFaction, setNewFaction] = useState('');
 
   const [editCharacterId, setEditCharacterId] = useState<string | null>(null);
   const [charFormName, setCharFormName] = useState('');
@@ -306,7 +325,21 @@ export default function App() {
     showNotification('Đã ghi khắc bộ quy tắc thiên địa bối cảnh.');
   };
 
-  const handleRemoveProfileArrayItem = (key: 'cultivationSystem' | 'ranks' | 'currencies' | 'rules', idx: number) => {
+  const handleAddFaction = () => {
+    if (!newFaction.trim()) return;
+    if (profile.factions.includes(newFaction.trim())) {
+      showNotification('Thế lực/tông phái này đã tồn tại!', true);
+      return;
+    }
+    setProfile({
+      ...profile,
+      factions: [...profile.factions, newFaction.trim()]
+    });
+    setNewFaction('');
+    showNotification('Đã ghi nhận thế lực/tông phái.');
+  };
+
+  const handleRemoveProfileArrayItem = (key: 'cultivationSystem' | 'ranks' | 'currencies' | 'rules' | 'factions', idx: number) => {
     const arr = [...profile[key]];
     arr.splice(idx, 1);
     setProfile({ ...profile, [key]: arr });
@@ -464,6 +497,149 @@ export default function App() {
           }
           return c;
         }));
+
+        // TỰ ĐỘNG ĐỒNG BỘ TOÀN BỘ HỒ SƠ NẾU CÓ THAY ĐỔI
+        if (out.storyProfileUpdates) {
+          setProfile(prevProfile => {
+            const updates = out.storyProfileUpdates;
+            const updatedProfile = { ...prevProfile };
+            let hasChanges = false;
+            const changeDetails: string[] = [];
+
+            // Simple string fields
+            const stringFields: ('title' | 'idea' | 'worldBackground' | 'startingHook' | 'coreConflict' | 'styleNotes')[] = [
+              'title', 'idea', 'worldBackground', 'startingHook', 'coreConflict', 'styleNotes'
+            ];
+            stringFields.forEach(f => {
+              if (updates[f] && updates[f].trim() && updates[f] !== prevProfile[f]) {
+                updatedProfile[f] = updates[f].trim();
+                hasChanges = true;
+                if (f === 'worldBackground') changeDetails.push('bối cảnh thế giới');
+                else if (f === 'idea') changeDetails.push('ý tưởng chính');
+                else if (f === 'title') changeDetails.push('tiêu đề truyện');
+                else if (f === 'startingHook') changeDetails.push('mở đầu kịch tính');
+                else if (f === 'coreConflict') changeDetails.push('mâu thuẫn cốt lõi');
+                else if (f === 'styleNotes') changeDetails.push('văn phong bút pháp');
+              }
+            });
+
+            // Array fields
+            const arrayFields: ('cultivationSystem' | 'ranks' | 'currencies' | 'rules' | 'factions' | 'themes')[] = [
+              'cultivationSystem', 'ranks', 'currencies', 'rules', 'factions', 'themes'
+            ];
+            arrayFields.forEach(f => {
+              if (updates[f] && Array.isArray(updates[f]) && updates[f].length > 0) {
+                const newArr = updates[f].map((x: any) => String(x).trim()).filter(Boolean);
+                const oldArr = prevProfile[f] || [];
+                const isDifferent = newArr.length !== oldArr.length || newArr.some((val, i) => val !== oldArr[i]);
+                if (isDifferent) {
+                  updatedProfile[f] = newArr;
+                  hasChanges = true;
+                  if (f === 'factions') changeDetails.push('thế lực/tông phái');
+                  else if (f === 'rules') changeDetails.push('quy tắc thế giới');
+                  else if (f === 'cultivationSystem') changeDetails.push('hệ thống tu luyện');
+                  else if (f === 'ranks') changeDetails.push('bí cảnh cảnh giới');
+                  else if (f === 'currencies') changeDetails.push('tiền tệ');
+                  else if (f === 'themes') changeDetails.push('chủ đề tác phẩm');
+                }
+              }
+            });
+
+            if (hasChanges) {
+              setTimeout(() => {
+                showNotification(`🌌 Thần thức vũ trụ: Đã tự động cập nhật ${changeDetails.join(', ')} trong hồ sơ!`);
+              }, 600);
+            }
+
+            return updatedProfile;
+          });
+        }
+
+        // TỰ ĐỘNG PHÁT HIỆN & CẬP NHẬT NHÂN VẬT LÊN HỒ SƠ TÁC PHẨM
+        if (out.characterUpdates && out.characterUpdates.length > 0) {
+          setProfile(prevProfile => {
+            const updatedCharacters = [...prevProfile.characters];
+            const addedNames: string[] = [];
+            const updatedNames: string[] = [];
+
+            out.characterUpdates.forEach((updatedChar: any) => {
+              if (!updatedChar.name || !updatedChar.name.trim()) return;
+              
+              const existingIndex = updatedCharacters.findIndex(
+                c => c.name.toLowerCase().trim() === updatedChar.name.toLowerCase().trim()
+              );
+
+              if (existingIndex !== -1) {
+                // Nhân vật đã được định nghĩa, đối chiếu sự thay đổi tu vi / thông số
+                const existing = updatedCharacters[existingIndex];
+                let changed = false;
+                const updatedObj = { ...existing };
+
+                if (updatedChar.gender && updatedChar.gender !== existing.gender) {
+                  updatedObj.gender = updatedChar.gender;
+                  changed = true;
+                }
+                if (updatedChar.biography && updatedChar.biography !== existing.biography && updatedChar.biography !== 'Nhân vật bí mật chưa hé lộ thần hồn.') {
+                  updatedObj.biography = updatedChar.biography;
+                  changed = true;
+                }
+                if (updatedChar.personality && updatedChar.personality !== existing.personality) {
+                  updatedObj.personality = updatedChar.personality;
+                  changed = true;
+                }
+                if (updatedChar.skills && updatedChar.skills !== existing.skills) {
+                  updatedObj.skills = updatedChar.skills;
+                  changed = true;
+                }
+                if (updatedChar.startingPower && updatedChar.startingPower !== existing.startingPower) {
+                  updatedObj.startingPower = updatedChar.startingPower;
+                  changed = true;
+                }
+                if (updatedChar.relationships && updatedChar.relationships !== existing.relationships) {
+                  updatedObj.relationships = updatedChar.relationships;
+                  changed = true;
+                }
+
+                if (changed) {
+                  updatedCharacters[existingIndex] = updatedObj;
+                  updatedNames.push(updatedChar.name.trim());
+                }
+              } else {
+                // Xuất hiện linh hồn nhân vật mới, khởi tạo hồ sơ tự động
+                const newChar: Character = {
+                  id: `char-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                  name: updatedChar.name.trim(),
+                  gender: updatedChar.gender || 'Nữ',
+                  biography: updatedChar.biography || 'Nhân vật được tự động lập hồ sơ từ bối cảnh chương mới.',
+                  personality: updatedChar.personality || '',
+                  skills: updatedChar.skills || '',
+                  startingPower: updatedChar.startingPower || '',
+                  relationships: updatedChar.relationships || ''
+                };
+                updatedCharacters.push(newChar);
+                addedNames.push(updatedChar.name.trim());
+              }
+            });
+
+            if (addedNames.length > 0 || updatedNames.length > 0) {
+              setTimeout(() => {
+                let note = "";
+                if (addedNames.length > 0) {
+                  note += `✨ Nhân vật mới: ${addedNames.join(', ')}. `;
+                }
+                if (updatedNames.length > 0) {
+                  note += `⚡ Tu vi/thông số biến thiên: ${updatedNames.join(', ')} đã tự động cập nhật!`;
+                }
+                showNotification(note);
+              }, 1200);
+            }
+
+            return {
+              ...prevProfile,
+              characters: updatedCharacters
+            };
+          });
+        }
 
         setUserInstruction('');
         showNotification('Thần thức bão bùng! Áng văn đắt giá đã lộ diện!');
@@ -1176,6 +1352,37 @@ export default function App() {
                     ))}
                   </div>
                 </div>
+
+                {/* Thế lực, tông phái, đế quốc */}
+                <div className="border border-[#dedad0] rounded-xl p-4 bg-[#fdfdfb] space-y-2.5">
+                  <label className="block text-xs font-black text-[#2d2c25] uppercase tracking-wider font-sans">• THẾ LỰC / TÔNG PHÁI / QUỐC GIA</label>
+                  <div className="flex gap-2">
+                    <input 
+                      id="new-faction-input"
+                      type="text" 
+                      className="flex-grow text-xs font-sans bg-white border border-[#dedad0] rounded-xl px-3.5 py-2.5 outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 text-[#2d2c25]"
+                      placeholder="VD: Băng Sương Tiên Tông, Đại Chu Thần Triều..."
+                      value={newFaction}
+                      onChange={(e) => setNewFaction(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddFaction()}
+                    />
+                    <button 
+                      onClick={handleAddFaction}
+                      className="bg-amber-805 hover:bg-amber-955 text-amber-50 px-4 rounded-xl text-xs font-bold transition-all duration-150 active:scale-[0.98] cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="space-y-2 pt-1">
+                    {profile.factions.map((item, i) => (
+                      <div key={i} className="flex items-start gap-2 bg-stone-50 border border-[#dedad0]/60 p-3 rounded-xl text-xs shadow-6xs">
+                        <span className="w-5 h-5 text-[10px] bg-amber-100 text-amber-800 font-bold rounded-full flex items-center justify-center shrink-0">{i+1}</span>
+                        <span className="flex-grow leading-relaxed text-[#2d2c25] font-medium font-sans">{item}</span>
+                        <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-650 cursor-pointer self-center transition-colors" onClick={() => handleRemoveProfileArrayItem('factions', i)} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1184,6 +1391,22 @@ export default function App() {
               <div id="setup-step3-pane" className="space-y-4 animate-fade-in bg-[#fcfbf9] border border-[#dedad0] p-5 rounded-2xl shadow-[0_4px_24px_-4px_rgba(45,44,37,0.04)]">
                 <div className="bg-[#fffbeb] border border-[#fef3c7] p-3 rounded-xl text-xs text-[#ae3813] leading-relaxed">
                   <span className="font-bold">Bước 3: Tạo File Thiết Kế Nhân Vật</span> — Định nghĩa diện mạo, bí cảnh, bối cảnh nhân thể để AI lồng ghép phù hợp từng phân đoạn truyện.
+                </div>
+
+                <div className="bg-emerald-50/70 border border-emerald-200/50 p-3.5 rounded-xl text-xs text-emerald-950 space-y-1.5 shadow-6xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-bold font-sans">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      <span>Thần Thức Đồng Bộ Toàn Bộ Hồ Sơ & Nhân Vật</span>
+                    </div>
+                    <span className="font-sans font-black uppercase text-[9px] bg-emerald-600/10 text-emerald-700 px-2.5 py-0.5 rounded-md">Đang Kích Hoạt</span>
+                  </div>
+                  <p className="text-[11px] font-sans leading-relaxed text-emerald-990 font-medium opacity-90">
+                    Mỗi khi bạn sáng tác hoặc viết tiếp tình tiết, bửu bối AI sẽ tự động phân tích và <strong>tự động đồng bộ toàn bộ bối cảnh</strong> (tông phái, thế lực, luật lệ, cảnh giới mới) cũng như <strong>tự động lập hồ sơ nhân vật mới</strong> hay cập nhật biến chuyển tu vi tức khắc.
+                  </p>
                 </div>
 
                 <div className="flex items-center justify-between border-b pb-2 text-sm font-bold text-[#413c33] font-serif">
