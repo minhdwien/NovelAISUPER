@@ -110,7 +110,8 @@ const DEFAULT_SETTINGS: AISettings = {
   customTone: 'Gợi cảm, điện ảnh và kịch tính',
   sensoryEmphasis: true,
   psychologicalFocus: true,
-  wordCountTarget: 1200
+  wordCountTarget: 1200,
+  model: 'gemini-3.5-flash'
 };
 
 export default function App() {
@@ -138,7 +139,19 @@ export default function App() {
 
   const [settings, setSettings] = useState<AISettings>(() => {
     const saved = localStorage.getItem('novel_app_settings');
-    return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          ...DEFAULT_SETTINGS,
+          ...parsed,
+          model: parsed.model || DEFAULT_SETTINGS.model || 'gemini-3.5-flash'
+        };
+      } catch (e) {
+        return DEFAULT_SETTINGS;
+      }
+    }
+    return DEFAULT_SETTINGS;
   });
 
   const [selectedChapterId, setSelectedChapterId] = useState<string>(() => {
@@ -825,6 +838,24 @@ export default function App() {
                     <option value="Chậm rãi, u mị và ngập hoài niệm">Chậm rãi sương mù trữ tình</option>
                     <option value="Nhịp điệu dồn dập, căng bức ngột thở">Nhịp điệu dồn dập kịch tính</option>
                     <option value="Kiếm hiệp cổ phong kỳ vĩ">Cổ phong Hán Việt diệu vợi</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-[#555042] mb-1.5 font-sans">Mô Hình AI (Mạnh mẽ & Linh hoạt)</label>
+                  <select 
+                    id="ai-model-select"
+                    className="w-full text-[13px] font-sans bg-[#fdfdfb] border border-[#dedad0] rounded-xl px-3.5 py-2.5 outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 cursor-pointer text-[#2d2c25] shadow-6xs"
+                    value={settings.model || 'gemini-3.5-flash'}
+                    onChange={(e) => setSettings({ ...settings, model: e.target.value })}
+                  >
+                    <option value="gemini-3.5-flash">Gemini 3.5 Flash (Tiêu chuẩn - Tối ưu)</option>
+                    <option value="gemini-3.5-pro">Gemini 3.5 Pro (Hảo hạng - Diễn đạt sâu sắc)</option>
+                    <option value="gemini-3.1-flash">Gemini 3.1 Flash (Linh hoạt hơn)</option>
+                    <option value="gemini-3.1-pro">Gemini 3.1 Pro (Bố cục kịch tính sâu sắc)</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Sáng tạo - Trực quan)</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro (Thượng hạng)</option>
+                    <option value="gemini-2.0-flash">Gemini 2.0 Flash (Siêu tốc - Chớp mắt)</option>
                   </select>
                 </div>
 

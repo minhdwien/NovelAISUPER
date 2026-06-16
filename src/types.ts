@@ -51,4 +51,5 @@ export interface AISettings {
   sensoryEmphasis: boolean; // Focus on 5 senses
   psychologicalFocus: boolean; // Focus on progressive internal changes
   wordCountTarget: number; // 500, 1000, 1500, 2000
+  model?: string; // e.g. 'gemini-3.5-flash', 'gemini-3.5-pro', 'gemini-2.5-flash', 'gemini-2.5-pro'
 }

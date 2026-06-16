@@ -283,6 +283,75 @@ LƯU Ý QUAN TRỌNG:
 `;
 }
 
+// Helper to parse multiple API keys from env
+function getGeminiApiKeys(): string[] {
+  const envVal = process.env.GEMINI_API_KEY || "";
+  return envVal
+    .split(/[,;]/)
+    .map((k) => k.trim())
+    .filter((k) => k.length > 0);
+}
+
+// Global or dynamic wrapper to invoke gemini generateContent with fallback/rotation
+async function generateContentWithRotation(
+  chosenModel: string,
+  promptText: string,
+  systemPrompt: string
+) {
+  const keys = getGeminiApiKeys();
+  if (keys.length === 0) {
+    throw new Error("Chưa cấu hình GEMINI_API_KEY trong hệ thống (Environment Variables).");
+  }
+
+  let lastError: any = null;
+  for (let i = 0; i < keys.length; i++) {
+    const currentKey = keys[i];
+    try {
+      console.log(`[INFO] Đang gửi yêu cầu tới model ${chosenModel} bằng API Key số ${i + 1}/${keys.length}...`);
+      const tempAi = new GoogleGenAI({
+        apiKey: currentKey,
+        httpOptions: {
+          headers: {
+            "User-Agent": "aistudio-build",
+          },
+        },
+      });
+
+      const response = await tempAi.models.generateContent({
+        model: chosenModel,
+        contents: promptText + `
+
+--- QUY TẮC PHẢN HỒI JSON BẮT BUỘC ---
+Kết quả trả về phải là một object JSON duy nhất chứa bốn trường:
+1. "content": Nội dung chương tiểu thuyết (string).
+2. "characterUpdates": Mảng các nhân vật mới xuất hiện hoặc được cập nhật, cấu trúc và yêu cầu như sau:
+   - Các trường: { name, gender, biography, personality, skills, startingPower }.
+   - Hãy quét kỹ phân đoạn văn vừa tạo ở "content".
+   - Nếu xuất hiện NHÂN VẬT MỚI: Thêm đầy đủ thông tin vào mảng này.
+   - Nếu NHÂN VẬT ĐÃ CÓ trong danh sách (như Thẩm Thanh Ngôn, Mộ Dung Nguyệt...) có sự biến thiên về sức mạnh/tu vi (ví dụ đột phá cảnh giới, bị suy giảm công lực), học thêm bí pháp/kỹ năng mới, thay đổi tâm lý hoặc trạng thái cơ thể: Hãy thêm nhân vật đó vào mảng này với "startingPower" và "skills" tương ứng đã được nâng cấp/thay đổi theo đúng tình tiết truyện vừa viết.
+3. "suggestedPaths": Mảng 3 gợi ý đường đi tiếp theo cho câu chuyện (array of strings).
+4. "storyProfileUpdates": Một object chứa các cập nhật trong hồ sơ truyện (Ví dụ: { "idea": "...", "worldBackground": "...", "factions": ["Vũ Trụ Cổ Tông", "A"] }). Nếu không có thay đổi gì, hãy để là null. Nếu có bất kỳ sự thay đổi hoặc khai mở nào mới liên quan đến bối cảnh tổng quan (được thêm từ tình tiết câu chuyện vừa sáng tác), hãy tự động phác họa lại hoặc bổ sung hoàn chỉnh các trường sau (như "title", "idea", "worldBackground", "startingHook", "coreConflict", "styleNotes", hoặc các mảng danh sách bối cảnh "rules", "cultivationSystem", "ranks", "currencies", "factions", "themes"). Khi cập nhật danh sách mảng bối cảnh, hãy sáp nhập đầy đủ và cung cấp danh sách mới sau khi cập nhật.
+
+Hãy viết câu trả lời của bạn đúng định dạng JSON này.
+`,
+        config: {
+          systemInstruction: systemPrompt,
+          temperature: 1.0,
+          topP: 0.95,
+        },
+      });
+
+      console.log(`[SUCCESS] Hoàn thành sinh nội dung bằng API Key số ${i + 1}/${keys.length}.`);
+      return response;
+    } catch (err: any) {
+      console.warn(`[WARNING] Gọi Gemini thất bại với API Key thứ ${i + 1}/${keys.length}. Đang kiểm nghiệm và chuyển sang key tiếp theo nếu có... Chi tiết lỗi:`, err.message || err);
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error("Tất cả các API Key đều không thể hoàn tất cuộc gọi.");
+}
+
 // API: Generate code or prose
 app.post("/api/generate-chapter", async (req, res) => {
   try {
@@ -302,6 +371,7 @@ app.post("/api/generate-chapter", async (req, res) => {
     }
 
     const systemPrompt = buildNovelSystemPrompt(profile, settings);
+    const chosenModel = settings?.model || "gemini-3.5-flash";
 
     // Build the contents based on user action
     let promptText = "";
@@ -348,30 +418,8 @@ Hãy đồng sáng tác chương "${activeChapter.title || `Chương ${activeCha
 `;
     }
 
-    // Call Gemini API with system instruction configured
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: promptText + `
-
---- QUY TẮC PHẢN HỒI JSON BẮT BUỘC ---
-Kết quả trả về phải là một object JSON duy nhất chứa bốn trường:
-1. "content": Nội dung chương tiểu thuyết (string).
-2. "characterUpdates": Mảng các nhân vật mới xuất hiện hoặc được cập nhật, cấu trúc và yêu cầu như sau:
-   - Các trường: { name, gender, biography, personality, skills, startingPower }.
-   - Hãy quét kỹ phân đoạn văn vừa tạo ở "content".
-   - Nếu xuất hiện NHÂN VẬT MỚI: Thêm đầy đủ thông tin vào mảng này.
-   - Nếu NHÂN VẬT ĐÃ CÓ trong danh sách (như Thẩm Thanh Ngôn, Mộ Dung Nguyệt...) có sự biến thiên về sức mạnh/tu vi (ví dụ đột phá cảnh giới, bị suy giảm công lực), học thêm bí pháp/kỹ năng mới, thay đổi tâm lý hoặc trạng thái cơ thể: Hãy thêm nhân vật đó vào mảng này với "startingPower" và "skills" tương ứng đã được nâng cấp/thay đổi theo đúng tình tiết truyện vừa viết.
-3. "suggestedPaths": Mảng 3 gợi ý đường đi tiếp theo cho câu chuyện (array of strings).
-4. "storyProfileUpdates": Một object chứa các cập nhật trong hồ sơ truyện (Ví dụ: { "idea": "...", "worldBackground": "...", "factions": ["Vũ Trụ Cổ Tông", "A"] }). Nếu không có thay đổi gì, hãy để là null. Nếu có bất kỳ sự thay đổi hoặc khai mở nào mới liên quan đến bối cảnh tổng quan (được thêm từ tình tiết câu chuyện vừa sáng tác), hãy tự động phác họa lại hoặc bổ sung hoàn chỉnh các trường sau (như "title", "idea", "worldBackground", "startingHook", "coreConflict", "styleNotes", hoặc các mảng danh sách bối cảnh "rules", "cultivationSystem", "ranks", "currencies", "factions", "themes"). Khi cập nhật danh sách mảng bối cảnh, hãy sáp nhập đầy đủ và cung cấp danh sách mới sau khi cập nhật.
-
-Hãy viết câu trả lời của bạn đúng định dạng JSON này.
-`,
-      config: {
-        systemInstruction: systemPrompt,
-        temperature: 1.0,
-        topP: 0.95,
-      },
-    });
+    // Call Gemini API with dynamic multi-key support
+    const response = await generateContentWithRotation(chosenModel, promptText, systemPrompt);
 
     const responseText = response.text || "{}";
     let data;
