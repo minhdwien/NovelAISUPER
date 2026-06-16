@@ -566,21 +566,21 @@ export default function App() {
           <div className="space-y-4 animate-fade-in pb-10">
             
             {/* Card 1: Hồi Chương Đang Viết */}
-            <div className="bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs space-y-3">
+            <div className="bg-[#fcfbf9] border border-[#dedad0] p-5 rounded-2xl shadow-[0_4px_24px_-4px_rgba(45,44,37,0.04)] space-y-4">
               <div className="flex items-start gap-3">
-                <div className="p-1.5 text-[#881337] bg-red-50 border border-red-100 rounded-xl shrink-0 mt-0.5">
+                <div className="p-2 text-[#881337] bg-rose-50 border border-rose-100/80 rounded-xl shrink-0 mt-0.5 shadow-6xs">
                   <BookOpen className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="block text-[9.5px] text-gray-400 font-sans font-extrabold tracking-wider uppercase">ĐANG ĐỒNG HÀNH VIẾT</span>
+                  <span className="block text-[10px] text-stone-400 font-sans font-bold tracking-wider uppercase mb-1.5">CHỌN CHƯƠNG / HỒI ĐANG VIẾT</span>
                   <select 
                     id="chapter-workspace-select"
-                    className="w-full bg-transparent font-serif font-black text-[#2d2c25] outline-none border-b border-[#ebdcca] pr-8 text-base focus:border-[#881337] pb-1 cursor-pointer"
+                    className="w-full bg-[#fdfdfb] border border-[#dedad0] rounded-xl px-3.5 py-2.5 font-serif font-bold text-sm text-[#2d2c25] outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 transition-all duration-200 cursor-pointer shadow-6xs"
                     value={activeChapter?.id || ''}
                     onChange={(e) => setSelectedChapterId(e.target.value)}
                   >
                     {chapters.map(c => (
-                      <option key={c.id} value={c.id}>
+                      <option key={c.id} value={c.id} className="font-serif text-[#2d2c25] bg-white">
                         Hồi {c.number}: {c.title.replace(/^(Chương|Hồi|Hồi\s*\d+:)\s*/i, '')}
                       </option>
                     ))}
@@ -588,11 +588,11 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-1">
                 <button 
                   id="create-new-chap-btn"
                   onClick={handleCreateChapter}
-                  className="bg-[#2a2822] hover:bg-black text-amber-100 px-4 py-2.5 rounded-xl text-xs font-bold shadow-6xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="bg-[#2a2822] hover:bg-black text-amber-100 px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all duration-150 active:scale-[0.98] cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Thêm Chương Mới</span>
@@ -600,7 +600,7 @@ export default function App() {
                 <button 
                   id="delete-current-chap-btn"
                   onClick={(e) => handleDeleteChapter(activeChapter.id, e)}
-                  className="hover:bg-red-50 text-red-800 border border-red-200 px-3 py-2 rounded-xl text-xs flex items-center justify-center transition-colors cursor-pointer bg-white"
+                  className="hover:bg-red-50 text-red-800 border border-[#dedad0] hover:border-red-200 px-3 py-2 rounded-xl text-xs flex items-center justify-center transition-all duration-150 bg-white shadow-6xs cursor-pointer"
                   title="Xóa chương hiện tại"
                 >
                   <Trash2 className="w-4 h-4 text-red-600" />
@@ -609,23 +609,23 @@ export default function App() {
             </div>
 
             {/* Card 2: Cấu Hình Bút Pháp */}
-            <div className="bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs space-y-4">
+            <div className="bg-[#fcfbf9] border border-[#dedad0] p-5 rounded-2xl shadow-[0_4px_24px_-4px_rgba(45,44,37,0.04)] space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-[#3a372d] tracking-wide uppercase flex items-center gap-1.5">
+                <span className="text-xs font-bold text-[#3a372d] tracking-wider uppercase flex items-center gap-1.5 font-sans">
                   <Settings className="w-4 h-4 text-amber-800" />
                   <span>CẤU HÌNH BÚT PHÁP SÁNG TÁC</span>
                 </span>
-                <span className="text-[10px] text-[#ae3813] bg-[#fffbeb] border border-[#d97706]/40 font-mono px-2 py-0.5 rounded font-extrabold uppercase tracking-wider">
+                <span className="text-[9.5px] text-[#ae3813] bg-amber-50 hover:bg-amber-100/50 border border-[#ae3813]/25 font-mono px-2 py-0.5 rounded font-extrabold uppercase tracking-wider select-none">
                   ORINLO INTEGRATED
                 </span>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#555042] mb-1.5">Mức Độ Chi Tiết (Orinlo Core)</label>
+                  <label className="block text-[11px] font-bold text-[#555042] mb-1.5 font-sans">Mức Độ Chi Tiết (Orinlo Core)</label>
                   <select 
                     id="writing-mode-select"
-                    className="w-full text-xs bg-white border border-[#cfcabb] rounded-xl px-3 py-2.5 outline-none focus:border-amber-800 cursor-pointer text-[#2d2c25]"
+                    className="w-full text-[13px] font-sans bg-[#fdfdfb] border border-[#dedad0] rounded-xl px-3.5 py-2.5 outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 cursor-pointer text-[#2d2c25] shadow-6xs"
                     value={settings.writingMode}
                     onChange={(e) => setSettings({ ...settings, writingMode: e.target.value as any })}
                   >
@@ -637,10 +637,10 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#555042] mb-1.5">Giọng Văn Chủ Định</label>
+                  <label className="block text-[11px] font-bold text-[#555042] mb-1.5 font-sans">Giọng Văn Chủ Định</label>
                   <select 
                     id="custom-tone-select"
-                    className="w-full text-xs bg-white border border-[#cfcabb] rounded-xl px-3 py-2.5 outline-none focus:border-amber-800 cursor-pointer text-[#2d2c25]"
+                    className="w-full text-[13px] font-sans bg-[#fdfdfb] border border-[#dedad0] rounded-xl px-3.5 py-2.5 outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 cursor-pointer text-[#2d2c25] shadow-6xs"
                     value={settings.customTone}
                     onChange={(e) => setSettings({ ...settings, customTone: e.target.value })}
                   >
@@ -652,35 +652,35 @@ export default function App() {
                   </select>
                 </div>
 
-                <div className="space-y-2 border-t border-[#f2edd9]/40 pt-3">
-                  <label className="flex items-center gap-2.5 text-xs text-[#2d2c25] font-medium cursor-pointer py-1 select-none">
+                <div className="space-y-2 border-t border-[#f2edd9]/50 pt-3.5">
+                  <label className="flex items-center gap-2.5 text-xs text-[#2d2c25] font-medium cursor-pointer py-1.5 px-1 hover:bg-stone-50/50 rounded-lg transition-colors select-none">
                     <input 
                       id="sensory-emphasis-checkbox"
                       type="checkbox"
                       checked={settings.sensoryEmphasis}
                       onChange={(e) => setSettings({ ...settings, sensoryEmphasis: e.target.checked })}
-                      className="w-4.5 h-4.5 rounded text-amber-600 cursor-pointer accent-[#d97706]"
+                      className="w-4.5 h-4.5 rounded text-amber-600 border-[#dedad0] cursor-pointer accent-amber-700 transition-all focus:ring-0 focus:ring-offset-0"
                     />
                     <span className="font-sans text-[12px] font-medium text-[#2d2c25]">Mô tả kỹ lưỡng ngũ giác quan</span>
                   </label>
 
-                  <label className="flex items-center gap-2.5 text-xs text-[#2d2c25] font-medium cursor-pointer py-1 select-none">
+                  <label className="flex items-center gap-2.5 text-xs text-[#2d2c25] font-medium cursor-pointer py-1.5 px-1 hover:bg-stone-50/50 rounded-lg transition-colors select-none">
                     <input 
                       id="psychological-focus-checkbox"
                       type="checkbox"
                       checked={settings.psychologicalFocus}
                       onChange={(e) => setSettings({ ...settings, psychologicalFocus: e.target.checked })}
-                      className="w-4.5 h-4.5 rounded text-amber-600 cursor-pointer accent-[#d97706]"
+                      className="w-4.5 h-4.5 rounded text-amber-600 border-[#dedad0] cursor-pointer accent-amber-700 transition-all focus:ring-0 focus:ring-offset-0"
                     />
                     <span className="font-sans text-[12px] font-medium text-[#2d2c25]">Khắc họa biến thiên tâm lý thâm tâm</span>
                   </label>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-[#413e34] border-t border-[#f2edd9]/40 pt-3">
-                  <span className="font-bold">Độ dài mục tiêu:</span>
+                <div className="flex items-center justify-between text-xs text-[#413e34] border-t border-[#f2edd9]/50 pt-3.5">
+                  <span className="font-bold font-sans">Độ dài mục tiêu:</span>
                   <select 
                     id="word-count-select"
-                    className="bg-white border border-[#cfcabb] rounded-lg px-2.5 py-1 text-xs outline-none cursor-pointer"
+                    className="bg-[#fdfdfb] border border-[#dedad0] rounded-xl px-3 py-1.5 text-xs font-sans outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 transition-all cursor-pointer shadow-6xs"
                     value={settings.wordCountTarget}
                     onChange={(e) => setSettings({ ...settings, wordCountTarget: Number(e.target.value) })}
                   >
@@ -693,13 +693,13 @@ export default function App() {
             </div>
 
             {/* Card 3: Chi Tiết Tiêu Đề Chương */}
-            <div className="bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs space-y-4">
+            <div className="bg-[#fcfbf9] border border-[#dedad0] p-5 rounded-2xl shadow-[0_4px_24px_-4px_rgba(45,44,37,0.04)] space-y-4">
               <div>
-                <label className="block text-[10px] font-sans font-bold text-gray-500 mb-1.5 uppercase tracking-wider">TIÊU ĐỀ / TÊN HỒI CHƯƠNG</label>
+                <label className="block text-[10px] font-sans font-bold text-stone-400 mb-1.5 uppercase tracking-wider">TIÊU ĐỀ / TÊN HỒI CHƯƠNG</label>
                 <input 
                   id="chap-title-input"
                   type="text" 
-                  className="w-full text-base font-serif font-black bg-white border border-[#dbd8cf] rounded-2xl px-4 py-3 outline-none focus:border-[#881337] text-[#2d2c25]"
+                  className="w-full text-sm font-serif font-bold bg-[#fdfdfb] border border-[#dedad0] rounded-xl px-4 py-3 outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 text-[#2d2c25] shadow-6xs placeholder-stone-400"
                   placeholder="VD: Hồi 1: Đêm Tuyết Trong Hang Băng lấp lánh"
                   value={activeChapter?.title || ''}
                   onChange={(e) => handleUpdateChapterField('title', e.target.value)}
@@ -707,10 +707,10 @@ export default function App() {
               </div>
 
               <div>
-                <label className="block text-[10px] font-sans font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Ý TƯỞNG PHÁC THẢO CỦA BẠN (CHI TIẾT CHO CHƯƠNG NÀY)</label>
+                <label className="block text-[10px] font-sans font-bold text-stone-400 mb-1.5 uppercase tracking-wider">Ý TƯỞNG PHÁC THẢO CỦA BẠN (CHI TIẾT CHO CHƯƠNG NÀY)</label>
                 <textarea 
                   id="chap-prompt-textarea"
-                  className="w-full h-24 text-xs font-sans bg-white border border-[#dbd8cf] rounded-2xl p-3 outline-none focus:border-[#881337] leading-relaxed resize-none text-[#2d2c25] custom-scrollbar"
+                  className="w-full h-24 text-[12.5px] font-sans bg-[#fdfdfb] border border-[#dedad0] rounded-xl p-3.5 outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 leading-relaxed resize-none text-[#2d2c25] custom-scrollbar shadow-6xs placeholder-stone-400"
                   placeholder="Mô tả các sự kiện bấu chốt mà bạn muốn vẽ bối cảnh..."
                   value={activeChapter?.userPrompt || ''}
                   onChange={(e) => handleUpdateChapterField('userPrompt', e.target.value)}
@@ -719,22 +719,22 @@ export default function App() {
             </div>
 
             {/* Card 4: Bảng Kích Hoạt Sáng Tác */}
-            <div className="bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs space-y-4">
+            <div className="bg-[#fcfbf9] border border-[#dedad0] p-5 rounded-2xl shadow-[0_4px_24px_-4px_rgba(45,44,37,0.04)] space-y-4">
               <div className="flex items-center gap-2">
-                <div className="p-1 px-3 bg-gradient-to-r from-[#881337] to-[#161512] text-[#decb96] rounded-xl flex items-center gap-1.5">
+                <div className="p-1 px-3 bg-gradient-to-r from-[#881337] to-[#161512] text-[#decb96] rounded-xl flex items-center gap-1.5 shadow-sm">
                   <Feather className="w-3.5 h-3.5" />
-                  <span className="text-[10.5px] font-sans font-extrabold uppercase tracking-wide">BẢNG KÍCH HOẠT SÁNG TÁC</span>
+                  <span className="text-[10px] font-sans font-bold uppercase tracking-wider">BẢNG KÍCH HOẠT SÁNG TÁC</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-1 p-1 bg-[#efebd9]/40 rounded-xl border border-[#cfcabb]/50 text-xs text-center font-bold font-sans">
+              <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#efebd9]/55 rounded-xl border border-[#dedad0]/80 text-xs text-center font-bold font-sans shadow-6xs">
                 <button 
                   id="action-write-new"
                   onClick={() => setActionType('writeNew')}
-                  className={`py-2 rounded-lg transition-all text-[11px] font-extrabold flex items-center justify-center cursor-pointer ${
+                  className={`py-2 rounded-lg transition-all duration-150 text-[11px] font-extrabold flex items-center justify-center cursor-pointer ${
                     actionType === 'writeNew' 
-                    ? 'bg-[#881337] text-white shadow' 
-                    : 'text-[#5e5a52] bg-white border border-transparent hover:text-black'
+                    ? 'bg-[#881337] text-white shadow-sm' 
+                    : 'text-[#5e5a52] bg-white border border-transparent hover:text-black hover:bg-white/80'
                   }`}
                 >
                   viết từ đầu
@@ -742,10 +742,10 @@ export default function App() {
                 <button 
                   id="action-continue"
                   onClick={() => setActionType('continue')}
-                  className={`py-2 rounded-lg transition-all text-[11px] font-extrabold flex items-center justify-center cursor-pointer ${
+                  className={`py-2 rounded-lg transition-all duration-150 text-[11px] font-extrabold flex items-center justify-center cursor-pointer ${
                     actionType === 'continue' 
-                    ? 'bg-[#881337] text-white shadow' 
-                    : 'text-[#5e5a52] bg-white border border-transparent hover:text-black'
+                    ? 'bg-[#881337] text-white shadow-sm' 
+                    : 'text-[#5e5a52] bg-white border border-transparent hover:text-black hover:bg-white/80'
                   }`}
                 >
                   viết tiếp ⬇
@@ -753,10 +753,10 @@ export default function App() {
                 <button 
                   id="action-elaborate"
                   onClick={() => setActionType('elaborate')}
-                  className={`py-2 rounded-lg transition-all text-[11px] font-extrabold flex items-center justify-center cursor-pointer ${
+                  className={`py-2 rounded-lg transition-all duration-150 text-[11px] font-extrabold flex items-center justify-center cursor-pointer ${
                     actionType === 'elaborate' 
-                    ? 'bg-[#881337] text-white shadow' 
-                    : 'text-[#5e5a52] bg-white border border-transparent hover:text-black'
+                    ? 'bg-[#881337] text-white shadow-sm' 
+                    : 'text-[#5e5a52] bg-white border border-transparent hover:text-black hover:bg-white/80'
                   }`}
                 >
                   viết chi tiết
@@ -764,15 +764,15 @@ export default function App() {
               </div>
 
               {activeChapter?.suggestedPaths && activeChapter.suggestedPaths.length > 0 && (
-                <div className="bg-[#fcfbf9] border border-[#eadaa6]/60 p-3.5 rounded-2xl shadow-inner space-y-1.5">
-                  <h4 className="text-[10px] font-bold text-[#555042] uppercase flex items-center gap-1.5 tracking-wider">
+                <div className="bg-[#fcfbf9] border border-[#eadaa6]/60 p-3.5 rounded-2xl shadow-inner space-y-2">
+                  <h4 className="text-[10px] font-bold text-[#555042] uppercase flex items-center gap-1.5 tracking-wider font-sans">
                     <Sparkles className="w-3.5 h-3.5 text-amber-600 animate-pulse" /> Gợi ý cốt truyện tiếp theo:
                   </h4>
                   <div className="flex flex-col gap-1.5">
                     {activeChapter.suggestedPaths.map((path, idx) => (
                       <button 
                         key={idx} 
-                        className="w-full text-left text-xs bg-white text-[#2d2c25] hover:bg-amber-50 hover:text-amber-950 p-2 rounded-xl border border-[#dbd8cf] transition-all leading-normal"
+                        className="w-full text-left text-xs bg-white text-[#2d2c25] hover:bg-amber-50 hover:text-amber-950 p-2.5 rounded-xl border border-[#dedad0] hover:border-amber-700/55 transition-all duration-150 leading-normal shadow-6xs"
                         onClick={() => setUserInstruction(path)}
                       >
                         {path}
@@ -785,7 +785,7 @@ export default function App() {
               <div>
                 <textarea 
                   id="user-instruction-input"
-                  className="w-full h-20 text-xs font-sans bg-white border border-[#dbd8cf] rounded-2xl p-3 outline-none focus:border-[#881337] leading-relaxed resize-none text-[#2d2c25] custom-scrollbar"
+                  className="w-full h-20 text-[12.5px] font-sans bg-[#fdfdfb] border border-[#dedad0] rounded-xl p-3.5 outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 leading-relaxed resize-none text-[#2d2c25] custom-scrollbar shadow-6xs placeholder-stone-400"
                   placeholder={
                     actionType === 'continue' 
                     ? 'Ý đồ hay tình tiết lôi cuốn bạn muốn thúc AI viết tiếp theo ở đây... (ví dụ: "Sư tôn đột ngột siết chặt hông, nén đau liếc mắt thắm lãng mạn...")'
@@ -802,12 +802,12 @@ export default function App() {
                 id="trigger-ai-btn"
                 onClick={handleCallAIGeneration}
                 disabled={isGenerating}
-                className="w-full bg-[#fdfcf9] hover:bg-[#FAF9F5] text-[#b45309] font-serif font-black text-sm py-4 px-4 rounded-2xl shadow-sm border border-[#d97706]/40 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed select-none group"
+                className="w-full bg-gradient-to-r from-amber-800 to-amber-950 hover:from-amber-850 hover:to-stone-950 text-[#fffbeb] font-serif font-black text-sm py-4 px-4 rounded-xl shadow-md border-0 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed select-none group transition-all duration-150 active:scale-[0.99]"
               >
                 {isGenerating ? (
-                  <RefreshCw className="w-5 h-5 animate-spin text-[#d97706]" />
+                  <RefreshCw className="w-5 h-5 animate-spin text-amber-200" />
                 ) : (
-                  <Sparkles className="w-5 h-5 text-[#d97706] animate-pulse group-hover:scale-110 transition-transform" />
+                  <Sparkles className="w-5 h-5 text-amber-300 animate-pulse group-hover:scale-110 transition-transform" />
                 )}
                 <span>
                   {isGenerating ? 'ĐỒNG SÁNG TÁC ĐANG VIẾT...' : '✨ ĐỒNG SÁNG TÁC - TOẢ LINH NỘI DUNG CHƯƠNG CHI TIẾT'}
@@ -823,11 +823,11 @@ export default function App() {
             </div>
 
             {/* Card 5: Tờ Giấy Bản Thảo Parchment */}
-            <div id="parchment-sheet-box" className="w-full bg-[#fcfbf9] border border-[#d9ccb4] shadow-md rounded-3xl p-5 md:p-8 flex flex-col relative overflow-hidden bg-[radial-gradient(#faf7ee_1px,transparent_1px)] [background-size:16px_16px] space-y-4">
+            <div id="parchment-sheet-box" className="w-full bg-[#fcfbf9] border border-[#d3cbb7] shadow-xl rounded-2xl p-5 md:p-8 flex flex-col relative overflow-hidden bg-[radial-gradient(#faf7ee_1px,transparent_1px)] [background-size:16px_16px] space-y-4">
               <div className="absolute top-0 bottom-0 left-5 w-px bg-red-800/10 hidden md:block"></div>
               <div className="absolute top-0 bottom-0 left-5.5 w-px bg-red-800/5 hidden md:block"></div>
 
-              <div className="flex justify-between items-center border-b border-[#eadaa6] pb-3 font-serif text-xs text-[#6e685f]">
+              <div className="flex justify-between items-center border-b border-[#eadaa6] pb-3.5 font-serif text-xs text-[#6e685f]">
                 <span className="flex items-center gap-1.5 font-bold">
                   <Feather className="w-4 h-4 text-amber-700" />
                   <span>{activeChapter?.title || 'Chương Chưa Đặt Tên'}</span>
@@ -869,12 +869,12 @@ export default function App() {
             </div>
 
             {/* Explainer rules */}
-            <div id="orinlo-rules-card" className="bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs">
+            <div id="orinlo-rules-card" className="bg-[#fcfbf9] border border-[#dedad0] p-5 rounded-2xl shadow-[0_4px_24px_-4px_rgba(45,44,37,0.04)]">
               <h4 className="font-serif font-bold text-sm text-[#4a3a24] flex items-center gap-2 mb-2">
                 <ShieldAlert className="w-4 h-4 text-red-800 shrink-0" />
                 <span>Quy Tắc Bút Pháp Thăng Hoa Orinlo Core</span>
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] leading-relaxed text-[#514d42]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] leading-relaxed text-[#514d42] font-sans">
                 <div className="space-y-1">
                   <p><span className="font-bold text-amber-900">• Đỉnh Cao Ngũ Giác:</span> Sáng tác lôi cuốn cần dốc tâm vẽ trọn vị giác nồng mật, thị giác bập bùng, thính giác náo nức.</p>
                 </div>
@@ -891,12 +891,12 @@ export default function App() {
           <div className="space-y-4 animate-fade-in pb-10">
             
             {/* Card 1: Hồ Sơ Cốt Truyện Header */}
-            <div className="bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs space-y-3">
+            <div className="bg-[#fcfbf9] border border-[#dedad0] p-5 rounded-2xl shadow-[0_4px_24px_-4px_rgba(45,44,37,0.04)] space-y-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="p-1 px-2.5 bg-gradient-to-r from-amber-700 to-[#161512] text-[#decb96] rounded-xl flex items-center gap-1.5">
+                  <div className="p-1 px-3 bg-gradient-to-r from-amber-700 to-[#161512] text-[#decb96] rounded-xl flex items-center gap-1.5 shadow-sm">
                     <Compass className="w-4 h-4 text-amber-300" />
-                    <h2 className="font-serif font-bold text-sm text-[#decb96]">Hồ Sơ Cốt Truyện Bảo Bản</h2>
+                    <h2 className="font-serif font-bold text-xs text-[#decb96] tracking-wide uppercase">Hồ Sơ Cốt Truyện Bảo Bản</h2>
                   </div>
                 </div>
 
@@ -907,13 +907,13 @@ export default function App() {
                   >
                     {isHeaderVisible ? 'Ẩn Header' : 'Hiện Header'}
                   </button>
-                  <span className="text-[10px] font-sans font-extrabold bg-[#881337] text-white px-2 py-1 rounded-lg">
+                  <span className="text-[10px] font-sans font-extrabold bg-[#881337] text-white px-2 py-1 rounded-lg select-none">
                     Sư Đồ - Tu Chân
                   </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#f2edd9]/40">
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#f2edd9]/50">
                 <button 
                   onClick={() => {
                     const data = JSON.stringify({ profile, chapters, settings }, null, 2);
@@ -925,11 +925,11 @@ export default function App() {
                     a.click();
                     showNotification('Đã tải xuống file hồ sơ hoàn chỉnh!');
                   }}
-                  className="text-center py-2 text-xs font-sans font-black text-amber-900 border border-[#dbd8cf] hover:border-amber-700 bg-white rounded-xl cursor-pointer"
+                  className="text-center py-2.5 text-xs font-sans font-extrabold text-amber-950 border border-[#dedad0] hover:border-amber-800 hover:bg-amber-50/20 bg-white rounded-xl cursor-pointer transition-all active:scale-[0.98] shadow-6xs"
                 >
                   Xuất Hồ sơ
                 </button>
-                <label className="text-center py-2 text-xs font-sans font-black text-amber-900 border border-[#dbd8cf] hover:border-amber-700 bg-white rounded-xl cursor-pointer block">
+                <label className="text-center py-2.5 text-xs font-sans font-extrabold text-[#881337] border border-[#dedad0] hover:border-[#881337] hover:bg-rose-50/25 bg-white rounded-xl cursor-pointer block transition-all active:scale-[0.98] shadow-6xs">
                   Nhập Hồ sơ
                   <input 
                     type="file" 
@@ -963,7 +963,7 @@ export default function App() {
             </div>
 
             {/* Card 2: 3-column sub tabs */}
-            <div className="grid grid-cols-3 border border-[#dbd8cf] bg-[#FAF9F5] rounded-2xl overflow-hidden font-sans text-xs font-bold text-[#5e5a52]">
+            <div className="grid grid-cols-3 border border-[#dedad0] bg-[#FAF9F5] rounded-xl overflow-hidden font-sans text-xs font-bold text-[#5e5a52] shadow-6xs">
               <button 
                 onClick={() => setProfileStep(1)}
                 className={`flex flex-col items-center gap-1.5 py-3.5 border-b-2.5 transition-all outline-none cursor-pointer ${
@@ -998,10 +998,8 @@ export default function App() {
                 <span>3. Nhân Vật</span>
               </button>
             </div>
-
-            {/* SUB-TAB 1: TỔNG QUAN */}
             {profileStep === 1 && (
-              <div id="setup-step1-pane" className="space-y-4 animate-fade-in bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs">
+              <div id="setup-step1-pane" className="space-y-4 animate-fade-in bg-[#fcfbf9] border border-[#dedad0] p-5 rounded-2xl shadow-[0_4px_24px_-4px_rgba(45,44,37,0.04)]">
                 <div className="bg-[#fffbeb] border border-[#fef3c7] p-3 rounded-xl text-xs text-[#ae3813] leading-relaxed">
                   <span className="font-bold">Bước 1: Tổng Quan Ý Tưởng</span> — Điền thông tin chính để định hình lối bút thuật tốt nhất cho AI.
                 </div>
@@ -1011,7 +1009,7 @@ export default function App() {
                   <input 
                     id="novel-title-input"
                     type="text"
-                    className="w-full text-sm font-serif font-black bg-white border border-[#dbd8cf] rounded-xl px-3.5 py-2.5 outline-none focus:border-[#881337] text-[#2d2c25]"
+                    className="w-full text-[13px] font-serif font-bold bg-[#fdfdfb] border border-[#dedad0] rounded-xl px-3.5 py-2.5 outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 text-[#2d2c25] shadow-6xs placeholder-stone-400"
                     placeholder="Nhập tên tiểu thuyết..."
                     value={profile.title}
                     onChange={(e) => setProfile({ ...profile, title: e.target.value })}
@@ -1022,7 +1020,7 @@ export default function App() {
                   <label className="block text-[10px] font-sans font-bold text-[#8e8a7f] mb-1.5 uppercase tracking-wider">Ý TƯỞNG CHỦ ĐẠO / CỐT LÕI</label>
                   <textarea 
                     id="novel-idea-textarea"
-                    className="w-full h-24 text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl p-3 outline-none focus:border-[#881337] leading-relaxed resize-none text-[#2d2c25] custom-scrollbar"
+                    className="w-full h-24 text-[12.5px] font-sans bg-[#fdfdfb] border border-[#dedad0] rounded-xl p-3.5 outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 leading-relaxed resize-none text-[#2d2c25] shadow-6xs placeholder-stone-400 custom-scrollbar"
                     placeholder="Tính đối lập mâu thuẫn chính..."
                     value={profile.idea}
                     onChange={(e) => setProfile({ ...profile, idea: e.target.value })}
@@ -1033,7 +1031,7 @@ export default function App() {
                   <label className="block text-[10px] font-sans font-bold text-[#8e8a7f] mb-1.5 uppercase tracking-wider">Ý TƯỞNG BỐI CẢNH THẾ GIỚI</label>
                   <textarea 
                     id="novel-world-textarea"
-                    className="w-full h-24 text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl p-3 outline-none focus:border-[#881337] leading-relaxed resize-none text-[#2d2c25] custom-scrollbar"
+                    className="w-full h-24 text-[12.5px] font-sans bg-[#fdfdfb] border border-[#dedad0] rounded-xl p-3.5 outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 leading-relaxed resize-none text-[#2d2c25] shadow-6xs placeholder-stone-400 custom-scrollbar"
                     placeholder="Tông môn thế gia..."
                     value={profile.worldBackground}
                     onChange={(e) => setProfile({ ...profile, worldBackground: e.target.value })}
@@ -1044,7 +1042,7 @@ export default function App() {
                   <label className="block text-[10px] font-sans font-bold text-[#8e8a7f] mb-1.5 uppercase tracking-wider">Ý TƯỞNG KHỞI ĐẦU (HOOK)</label>
                   <textarea 
                     id="novel-hook-textarea"
-                    className="w-full h-20 text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl p-3 outline-none focus:border-[#881337] leading-relaxed resize-none text-[#2d2c25] custom-scrollbar"
+                    className="w-full h-20 text-[12.5px] font-sans bg-[#fdfdfb] border border-[#dedad0] rounded-xl p-3.5 outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 leading-relaxed resize-none text-[#2d2c25] shadow-6xs placeholder-stone-400 custom-scrollbar"
                     placeholder="Sự cố hay biến cố ban đầu..."
                     value={profile.startingHook}
                     onChange={(e) => setProfile({ ...profile, startingHook: e.target.value })}
@@ -1055,19 +1053,19 @@ export default function App() {
 
             {/* SUB-TAB 2: THIẾT CHẾ */}
             {profileStep === 2 && (
-              <div id="setup-step2-pane" className="space-y-4 animate-fade-in bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs">
+              <div id="setup-step2-pane" className="space-y-4 animate-fade-in bg-[#fcfbf9] border border-[#dedad0] p-5 rounded-2xl shadow-[0_4px_24px_-4px_rgba(45,44,37,0.04)]">
                 <div className="bg-[#fffbeb] border border-[#fef3c7] p-3 rounded-xl text-xs text-[#ae3813] leading-relaxed">
                   <span className="font-bold">Bước 2: Hệ Thống Bối Cảnh Chi Tiết</span> — Đặt quy cách thế giới. Bấm <span className="font-bold">+</span> để lưu thông số.
                 </div>
 
                 {/* Tu luyện */}
-                <div className="border border-[#dbd8cf]/80 rounded-2xl p-3.5 bg-[#FCFBF8] space-y-2">
-                  <label className="block text-xs font-black text-[#2d2c25] uppercase tracking-wider">• HỆ THỐNG TU LUYỆN CỐT LÕI</label>
+                <div className="border border-[#dedad0] rounded-xl p-4 bg-[#fdfdfb] space-y-2.5">
+                  <label className="block text-xs font-black text-[#2d2c25] uppercase tracking-wider font-sans">• HỆ THỐNG TU LUYỆN CỐT LÕI</label>
                   <div className="flex gap-2">
                     <input 
                       id="new-cultivation-input"
                       type="text" 
-                      className="flex-grow text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2 outline-none focus:border-amber-600 text-[#2d2c25]"
+                      className="flex-grow text-xs font-sans bg-white border border-[#dedad0] rounded-xl px-3.5 py-2.5 outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 text-[#2d2c25]"
                       placeholder="Thêm hệ pháp..."
                       value={newCultivation}
                       onChange={(e) => setNewCultivation(e.target.value)}
@@ -1075,7 +1073,7 @@ export default function App() {
                     />
                     <button 
                       onClick={handleAddCultivation}
-                      className="bg-amber-800 text-amber-50 hover:bg-amber-950 px-4 rounded-xl text-xs font-bold cursor-pointer"
+                      className="bg-amber-800 hover:bg-amber-955 text-amber-50 px-4 rounded-xl text-xs font-bold transition-all duration-150 active:scale-[0.98] cursor-pointer"
                     >
                       +
                     </button>
@@ -1084,20 +1082,20 @@ export default function App() {
                     {profile.cultivationSystem.map((item, i) => (
                       <span key={i} className="text-xs bg-[#f4ebd9]/85 text-[#513c06] px-3 py-1 rounded-xl border border-amber-200/50 flex items-center gap-1.5 font-medium shadow-6xs">
                         <span>{item}</span>
-                        <Trash2 className="w-3.5 h-3.5 text-amber-950 hover:text-red-600 cursor-pointer" onClick={() => handleRemoveProfileArrayItem('cultivationSystem', i)} />
+                        <Trash2 className="w-3.5 h-3.5 text-amber-955 hover:text-red-655 cursor-pointer transition-colors" onClick={() => handleRemoveProfileArrayItem('cultivationSystem', i)} />
                       </span>
                     ))}
                   </div>
                 </div>
 
                 {/* Cảnh giới */}
-                <div className="border border-[#dbd8cf]/80 rounded-2xl p-3.5 bg-[#FCFBF8] space-y-2">
-                  <label className="block text-xs font-black text-[#2d2c25] uppercase tracking-wider">• TÊN CÁC CẤP BẬC / CẢNH GIỚI</label>
+                <div className="border border-[#dedad0] rounded-xl p-4 bg-[#fdfdfb] space-y-2.5">
+                  <label className="block text-xs font-black text-[#2d2c25] uppercase tracking-wider font-sans">• TÊN CÁC CẤP BẬC / CẢNH GIỚI</label>
                   <div className="flex gap-2">
                     <input 
                       id="new-rank-input"
                       type="text" 
-                      className="flex-grow text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2 outline-none focus:border-amber-600 text-[#2d2c25]"
+                      className="flex-grow text-xs font-sans bg-white border border-[#dedad0] rounded-xl px-3.5 py-2.5 outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-350 transition-all duration-200 text-[#2d2c25]"
                       placeholder="VD: Trúc Cơ, Kim Đan..."
                       value={newRank}
                       onChange={(e) => setNewRank(e.target.value)}
@@ -1105,7 +1103,7 @@ export default function App() {
                     />
                     <button 
                       onClick={handleAddRank}
-                      className="bg-amber-800 text-amber-50 hover:bg-amber-950 px-4 rounded-xl text-xs font-bold cursor-pointer"
+                      className="bg-amber-800 hover:bg-amber-955 text-amber-50 px-4 rounded-xl text-xs font-bold transition-all duration-150 active:scale-[0.98] cursor-pointer"
                     >
                       +
                     </button>
@@ -1114,20 +1112,18 @@ export default function App() {
                     {profile.ranks.map((item, i) => (
                       <span key={i} className="text-xs bg-blue-50/70 text-blue-950 px-3 py-1 rounded-xl border border-blue-200/50 flex items-center gap-1.5 font-mono shadow-6xs">
                         <span>{item}</span>
-                        <Trash2 className="w-3.5 h-3.5 text-blue-900 hover:text-red-500 cursor-pointer" onClick={() => handleRemoveProfileArrayItem('ranks', i)} />
+                        <Trash2 className="w-3.5 h-3.5 text-blue-900 hover:text-red-500 cursor-pointer transition-colors" onClick={() => handleRemoveProfileArrayItem('ranks', i)} />
                       </span>
                     ))}
                   </div>
                 </div>
-
-                {/* Tiền tệ */}
-                <div className="border border-[#dbd8cf]/80 rounded-2xl p-3.5 bg-[#FCFBF8] space-y-2">
-                  <label className="block text-xs font-black text-[#2d2c25] uppercase tracking-wider">• ĐƠN VỊ TIỀN TỆ</label>
+                <div className="border border-[#dedad0] rounded-xl p-4 bg-[#fdfdfb] space-y-2.5">
+                  <label className="block text-xs font-black text-[#2d2c25] uppercase tracking-wider font-sans">• ĐƠN VỊ TIỀN TỆ</label>
                   <div className="flex gap-2">
                     <input 
                       id="new-currency-input"
                       type="text" 
-                      className="flex-grow text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2 outline-none focus:border-amber-600 text-[#2d2c25]"
+                      className="flex-grow text-xs font-sans bg-white border border-[#dedad0] rounded-xl px-3.5 py-2.5 outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 text-[#2d2c25]"
                       placeholder="Linh thạch, Thần nguyên bảo..."
                       value={newCurrency}
                       onChange={(e) => setNewCurrency(e.target.value)}
@@ -1135,7 +1131,7 @@ export default function App() {
                     />
                     <button 
                       onClick={handleAddCurrency}
-                      className="bg-amber-800 text-amber-50 hover:bg-amber-950 px-4 rounded-xl text-xs font-bold cursor-pointer"
+                      className="bg-amber-805 hover:bg-amber-955 text-amber-50 px-4 rounded-xl text-xs font-bold transition-all duration-150 active:scale-[0.98] cursor-pointer"
                     >
                       +
                     </button>
@@ -1144,20 +1140,20 @@ export default function App() {
                     {profile.currencies.map((item, i) => (
                       <span key={i} className="text-xs bg-emerald-50/70 text-emerald-950 px-3 py-1 rounded-xl border border-emerald-200/50 flex items-center gap-1.5 shadow-6xs">
                         <span>{item}</span>
-                        <Trash2 className="w-3.5 h-3.5 text-emerald-800 hover:text-red-500 cursor-pointer" onClick={() => handleRemoveProfileArrayItem('currencies', i)} />
+                        <Trash2 className="w-3.5 h-3.5 text-emerald-800 hover:text-red-555 cursor-pointer transition-colors" onClick={() => handleRemoveProfileArrayItem('currencies', i)} />
                       </span>
                     ))}
                   </div>
                 </div>
 
                 {/* Pháp tắc vạn cổ */}
-                <div className="border border-[#dbd8cf]/80 rounded-2xl p-3.5 bg-[#FCFBF8] space-y-2">
-                  <label className="block text-xs font-black text-[#2d2c25] uppercase tracking-wider">• QUY TẮC PHÁP TẮC VŨ TRỤ</label>
+                <div className="border border-[#dedad0] rounded-xl p-4 bg-[#fdfdfb] space-y-2.5">
+                  <label className="block text-xs font-black text-[#2d2c25] uppercase tracking-wider font-sans">• QUY TẮC PHÁP TẮC VŨ TRỤ</label>
                   <div className="flex gap-2">
                     <input 
                       id="new-rule-input"
                       type="text" 
-                      className="flex-grow text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2 outline-none focus:border-amber-600 text-[#2d2c25]"
+                      className="flex-grow text-xs font-sans bg-white border border-[#dedad0] rounded-xl px-3.5 py-2.5 outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 text-[#2d2c25]"
                       placeholder="Luật thiên địa..."
                       value={newRule}
                       onChange={(e) => setNewRule(e.target.value)}
@@ -1165,17 +1161,17 @@ export default function App() {
                     />
                     <button 
                       onClick={handleAddRule}
-                      className="bg-amber-800 text-amber-50 hover:bg-amber-950 px-4 rounded-xl text-xs font-bold cursor-pointer"
+                      className="bg-amber-805 hover:bg-amber-955 text-amber-50 px-4 rounded-xl text-xs font-bold transition-all duration-150 active:scale-[0.98] cursor-pointer"
                     >
                       +
                     </button>
                   </div>
                   <div className="space-y-2 pt-1">
                     {profile.rules.map((item, i) => (
-                      <div key={i} className="flex items-start gap-2 bg-stone-50 border p-3 rounded-xl text-xs">
+                      <div key={i} className="flex items-start gap-2 bg-stone-50 border border-[#dedad0]/60 p-3 rounded-xl text-xs shadow-6xs">
                         <span className="w-5 h-5 text-[10px] bg-stone-200 text-stone-700 font-bold rounded-full flex items-center justify-center shrink-0">{i+1}</span>
                         <span className="flex-grow leading-relaxed text-[#2d2c25] font-medium font-sans">{item}</span>
-                        <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-600 cursor-pointer self-center" onClick={() => handleRemoveProfileArrayItem('rules', i)} />
+                        <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-650 cursor-pointer self-center transition-colors" onClick={() => handleRemoveProfileArrayItem('rules', i)} />
                       </div>
                     ))}
                   </div>
@@ -1185,7 +1181,7 @@ export default function App() {
 
             {/* SUB-TAB 3: NHÂN VẬT */}
             {profileStep === 3 && (
-              <div id="setup-step3-pane" className="space-y-4 animate-fade-in bg-[#FAF9F5] border border-[#dbd8cf] p-4 rounded-3xl shadow-xs">
+              <div id="setup-step3-pane" className="space-y-4 animate-fade-in bg-[#fcfbf9] border border-[#dedad0] p-5 rounded-2xl shadow-[0_4px_24px_-4px_rgba(45,44,37,0.04)]">
                 <div className="bg-[#fffbeb] border border-[#fef3c7] p-3 rounded-xl text-xs text-[#ae3813] leading-relaxed">
                   <span className="font-bold">Bước 3: Tạo File Thiết Kế Nhân Vật</span> — Định nghĩa diện mạo, bí cảnh, bối cảnh nhân thể để AI lồng ghép phù hợp từng phân đoạn truyện.
                 </div>
@@ -1202,7 +1198,7 @@ export default function App() {
                       setCharFormPower('');
                       showNotification('Đã xóa trắng thông tin form!');
                     }}
-                    className="text-[10.5px] uppercase font-sans font-extrabold text-[#ae3813] flex items-center gap-1 cursor-pointer select-none"
+                    className="text-[10.5px] uppercase font-sans font-extrabold text-[#ae3813] flex items-center gap-1 cursor-pointer select-none hover:opacity-80-all"
                   >
                     <UserPlus className="w-3.5 h-3.5" />
                     <span>xóa trắng form</span>
@@ -1210,28 +1206,28 @@ export default function App() {
                 </div>
 
                 {/* Form edit character */}
-                <div className="bg-[#FCFBF8] border border-amber-800/15 p-4 rounded-2xl space-y-3 shadow-6xs">
-                  <div className="text-xs font-sans font-black text-amber-950 flex items-center gap-1 border-b pb-2">
+                <div className="bg-[#fdfdfb] border border-[#dedad0] p-5 rounded-xl space-y-3.5 shadow-6xs">
+                  <div className="text-xs font-sans font-black text-amber-950 flex items-center gap-1.5 border-b border-[#f3ecd8] pb-2.5">
                     <PenTool className="w-4 h-4 text-red-800" />
                     <span>{editCharacterId ? 'ĐANG BIÊN TẬP NHÂN VẬT' : 'THÊM NHÂN VẬT MỚI'}</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] font-sans font-bold text-gray-500 uppercase">Tên nhân vật *</label>
+                      <label className="block text-[10px] font-sans font-bold text-stone-500 uppercase">Tên nhân vật *</label>
                       <input 
                         id="char-name-input"
                         type="text" 
-                        className="w-full text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2.5 mt-1 text-[#2d2c25]"
+                        className="w-full text-xs font-sans bg-white border border-[#dedad0] rounded-xl px-3.5 py-2.5 mt-1 text-[#2d2c25] outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 shadow-6xs"
                         placeholder="VD: Thẩm Thanh Ngôn"
                         value={charFormName}
                         onChange={(e) => setCharFormName(e.target.value)}
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-sans font-bold text-gray-500 uppercase">Giới tính</label>
+                      <label className="block text-[10px] font-sans font-bold text-stone-500 uppercase">Giới tính</label>
                       <select 
-                        className="w-full text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2.5 mt-1 cursor-pointer text-[#2d2c25]"
+                        className="w-full text-xs font-sans bg-white border border-[#dedad0] rounded-xl px-3.5 py-2.5 mt-1 cursor-pointer text-[#2d2c25] outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 shadow-6xs"
                         value={charFormGender}
                         onChange={(e) => setCharFormGender(e.target.value)}
                       >
@@ -1243,10 +1239,10 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-sans font-bold text-gray-500 uppercase">Tính cách &amp; Thần thái</label>
+                    <label className="block text-[10px] font-sans font-bold text-stone-500 uppercase">Tính cách &amp; Thần thái</label>
                     <input 
                       type="text" 
-                      className="w-full text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2.5 mt-1 text-[#2d2c25]"
+                      className="w-full text-xs font-sans bg-white border border-[#dedad0] rounded-xl px-3.5 py-2.5 mt-1 text-[#2d2c25] outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 shadow-6xs"
                       placeholder="Lạnh lùng võ đạo, thâm trầm, kiêu ngạo..."
                       value={charFormPersonality}
                       onChange={(e) => setCharFormPersonality(e.target.value)}
@@ -1254,10 +1250,10 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-sans font-bold text-gray-500 uppercase">Pháp khí / Tiên thuật sở trường</label>
+                    <label className="block text-[10px] font-sans font-bold text-stone-500 uppercase">Pháp khí / Tiên thuật sở trường</label>
                     <input 
                       type="text" 
-                      className="w-full text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2.5 mt-1 text-[#2d2c25]"
+                      className="w-full text-xs font-sans bg-white border border-[#dedad0] rounded-xl px-3.5 py-2.5 mt-1 text-[#2d2c25] outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 shadow-6xs"
                       placeholder="Cửu Trọng Thiên Nhãn, Phượng Dực Kiếm..."
                       value={charFormSkills}
                       onChange={(e) => setCharFormSkills(e.target.value)}
@@ -1265,10 +1261,10 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-sans font-bold text-gray-500 uppercase">Tu vi / Sức mạnh ban đầu</label>
+                    <label className="block text-[10px] font-sans font-bold text-stone-500 uppercase">Tu vi / Sức mạnh ban đầu</label>
                     <input 
                       type="text" 
-                      className="w-full text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl px-3 py-2.5 mt-1 text-[#2d2c25]"
+                      className="w-full text-xs font-sans bg-white border border-[#dedad0] rounded-xl px-3.5 py-2.5 mt-1 text-[#2d2c25] outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 shadow-6xs"
                       placeholder="VD: Kiếm Tôn đại cực cảnh..."
                       value={charFormPower}
                       onChange={(e) => setCharFormPower(e.target.value)}
@@ -1276,9 +1272,9 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-sans font-bold text-gray-500 uppercase">Tiểu Sử / Điển Tích</label>
+                    <label className="block text-[10px] font-sans font-bold text-stone-500 uppercase">Tiểu Sử / Điển Tích</label>
                     <textarea 
-                      className="w-full h-20 text-xs font-sans bg-white border border-[#dbd8cf] rounded-xl p-3 mt-1 text-[#2d2c25] resize-none custom-scrollbar leading-relaxed"
+                      className="w-full h-20 text-xs font-sans bg-white border border-[#dedad0] rounded-xl p-3.5 mt-1 text-[#2d2c25] outline-none focus:ring-4 focus:ring-amber-800/10 focus:border-amber-800 hover:border-stone-300 transition-all duration-200 resize-none custom-scrollbar leading-relaxed shadow-6xs placeholder-stone-400"
                       placeholder="Huyết hải chi thù, thầm chứa tiên đan..."
                       value={charFormBio}
                       onChange={(e) => setCharFormBio(e.target.value)}
@@ -1287,7 +1283,7 @@ export default function App() {
 
                   <button 
                     onClick={handleSaveCharacter}
-                    className="w-full bg-[#881337] hover:bg-black text-white font-bold py-3.5 px-4 rounded-xl text-xs uppercase cursor-pointer flex items-center justify-center gap-1.5 shadow"
+                    className="w-full bg-[#881337] hover:bg-black text-white font-bold py-3.5 px-4 rounded-xl text-xs uppercase cursor-pointer flex items-center justify-center gap-1.5 shadow transition-all duration-150 active:scale-[0.99]"
                   >
                     <Save className="w-4 h-4 text-[#decb96]" />
                     <span>{editCharacterId ? 'Lưu Thiết Kế Nhân Vật' : 'Xác Tạo Nhân Vật'}</span>
@@ -1297,7 +1293,7 @@ export default function App() {
                 {/* List output character */}
                 <div className="space-y-3 pt-2">
                   {profile.characters.map((c) => (
-                    <div key={c.id} className="p-4 rounded-2xl bg-white border border-[#dbd8cf] shadow-sm space-y-3 hover:border-amber-400 transition-colors">
+                    <div key={c.id} className="p-4 rounded-xl bg-white border border-[#dedad0] shadow-sm space-y-3 hover:border-amber-700/60 transition-colors">
                       <div className="flex justify-between items-center bg-stone-50/50 p-1.5 rounded-xl">
                         <div className="flex items-center gap-2">
                           <span className="font-serif font-black text-[13.5px] text-[#2b271e]">{c.name}</span>

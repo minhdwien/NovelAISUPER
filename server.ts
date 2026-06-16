@@ -285,7 +285,14 @@ LƯU Ý QUAN TRỌNG:
 // API: Generate code or prose
 app.post("/api/generate-chapter", async (req, res) => {
   try {
-    const { profile, settings, currentChapter, previousChaptersText, actionType, userInstruction } = req.body;
+    const { profile, settings, currentChapter, chapter, previousChaptersText, actionType, userInstruction } = req.body;
+    const activeChapter = currentChapter || chapter;
+
+    if (!activeChapter) {
+      return res.status(400).json({
+        error: "Yêu cầu không hợp lệ: Thiếu dữ liệu chương (chapter hoặc currentChapter)."
+      });
+    }
 
     if (!process.env.GEMINI_API_KEY) {
       return res.status(400).json({
@@ -299,9 +306,9 @@ app.post("/api/generate-chapter", async (req, res) => {
     let promptText = "";
     if (actionType === "writeNew") {
       promptText = `
-Hãy viết một chương hoàn chỉnh mới mang tên: "${currentChapter.title || `Chương ${currentChapter.number}`}".
+Hãy viết một chương hoàn chỉnh mới mang tên: "${activeChapter.title || `Chương ${activeChapter.number}`}".
 Bối cảnh phân đoạn này dựa trên ý tưởng khởi khởi điểm của tôi:
-"${currentChapter.userPrompt || "Viết một chương mở đầu cuốn hút."}"
+"${activeChapter.userPrompt || "Viết một chương mở đầu cuốn hút."}"
 
 Chỉ thị chi tiết thêm của tôi cho phần này:
 "${userInstruction || "Không có chỉ thị phụ"}"
@@ -309,10 +316,11 @@ Chỉ thị chi tiết thêm của tôi cho phần này:
 Yêu cầu: Hãy vận dụng phong cách xuất sắc nhất, mô tả tỉ mỉ chi tiết cảm súc, không gian, đối thoại thăng hoa và biến chuyển nội tâm mạnh mẽ. Hãy viết dài, cuốn hút!
 `;
     } else if (actionType === "continue") {
+      const prevContentValue = previousChaptersText || activeChapter.content || "";
       promptText = `
 Đây là nội dung trước đó của tác phẩm hoặc chương hiện tại:
 --- NỘI DUNG ĐÃ VIẾT ---
-${previousChaptersText || ""}
+${prevContentValue}
 --- HẾT NỘI DUNG ĐÃ VIẾT ---
 
 Ý tưởng/Ý đồ để viết tiếp của tôi:
@@ -324,7 +332,7 @@ Yêu cầu: Hãy bắt đầu viết tiếp một cách vô cùng liền mạch,
       promptText = `
 Đây là bản nháp hiện tại của chương:
 --- BẢN NHÁP HIỆN TẠI ---
-${currentChapter.content || ""}
+${activeChapter.content || ""}
 --- HẾT BẢN NHÁP ---
 
 Chỉ thị làm giàu nội dung / viết chi tiết hơn của tôi tại phân đoạn cụ thể:
@@ -334,8 +342,8 @@ Yêu cầu: Hãy viết lại hoặc phát triển thêm bản nháp này để 
 `;
     } else {
       promptText = `
-Hãy đồng sáng tác chương "${currentChapter.title || `Chương ${currentChapter.number}`}" dựa trên chỉ thị sau:
-"${userInstruction || currentChapter.userPrompt || "Mô tả câu chuyện một cách nghệ thuật."}"
+Hãy đồng sáng tác chương "${activeChapter.title || `Chương ${activeChapter.number}`}" dựa trên chỉ thị sau:
+"${userInstruction || activeChapter.userPrompt || "Mô tả câu chuyện một cách nghệ thuật."}"
 `;
     }
 
